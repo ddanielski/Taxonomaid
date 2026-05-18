@@ -153,6 +153,7 @@ activemq-data/
 .venv
 env/
 venv/
+secrets/
 ENV/
 env.bak/
 venv.bak/
@@ -216,3 +217,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Taxonomaid runtime state and local config (only committed: .example.yaml templates).
+data/*
+!data/.gitkeep
+test-watch/*
+!test-watch/.gitkeep
+config/watches.yaml
+config/llm.yaml
+config/notifier.yaml
+config/rules.yaml
+config/proposed_rules.yaml
+config/rejected_rules.yaml
+
+# Docker secrets directory referenced by compose.yaml. Files inside
+# hold raw API keys / bot tokens, so the directory is gitignored
+# wholesale.
+secrets/
+
+# Local buildx state that lands in the workspace when running `docker
+# build` inside a sandbox that can't write to ~/.docker.
+.docker-cache/

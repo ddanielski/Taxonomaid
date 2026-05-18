@@ -1,0 +1,228 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "taxonomaid"
+version = "0.1.0"
+description = "Hybrid auto-sorter for shared folders: deterministic rules + LLM fallback that learns into rules over time."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Daniel Danielski" },
+]
+keywords = ["file-organizer", "watcher", "llm", "automation", "rules"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "typer>=0.12",
+    "structlog>=24.1",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "apprise>=1.8",
+    "watchfiles>=0.22",
+    "python-dotenv>=1.0",
+    "pypdf>=5.0",
+    "python-docx>=1.1",
+    "striprtf>=0.0.26",
+    "rich>=13",
+]
+
+[project.scripts]
+taxonomaid = "taxonomaid.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/gdanielski/Taxonomaid"
+Issues = "https://github.com/gdanielski/Taxonomaid/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.1",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.99",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "bandit>=1.7",
+    "import-linter>=2.0",
+    "pre-commit>=3.7",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.25",
+    "types-PyYAML>=6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/taxonomaid"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/config", "/docs", "/README.md", "/CHANGELOG.md", "/LICENSE", "/pyproject.toml"]
+
+# -------------------------------------------------------------------- Ruff
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "SIM",
+    "RET",
+    "PTH",
+    "PL",
+    "RUF",
+    "D",
+]
+ignore = [
+    "D203",
+    "D213",
+    "D107",
+    "PLR0913",
+    "PLR0911",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "S101", "PLR2004", "PLR0913", "ANN"]
+"docs/**/*.py" = ["D", "INP001"]
+"**/_*.py" = ["D"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# -------------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+strict_equality = true
+mypy_path = "src"
+packages = ["taxonomaid"]
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["apprise.*", "docx.*", "striprtf.*"]
+ignore_missing_imports = true
+
+# -------------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "unit: pure tests; default selection",
+    "integration: services wired with fakes; uses tmp_path",
+    "contract: real external services (LLM/Telegram); opt-in only",
+    "external: alias for contract; opt-in only",
+]
+filterwarnings = [
+    "error",
+]
+
+# -------------------------------------------------------------------- coverage
+[tool.coverage.run]
+source = ["src/taxonomaid"]
+branch = true
+omit = [
+    "src/taxonomaid/__main__.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@overload",
+    "\\.\\.\\.",
+]
+
+# -------------------------------------------------------------------- bandit
+[tool.bandit]
+exclude_dirs = ["tests", "build", ".venv", "docs"]
+skips = ["B101"]
+
+# -------------------------------------------------------------------- import-linter
+[tool.importlinter]
+root_package = "taxonomaid"
+
+[[tool.importlinter.contracts]]
+name = "domain has no internal imports"
+type = "forbidden"
+source_modules = ["taxonomaid.domain"]
+forbidden_modules = [
+    "taxonomaid.ports",
+    "taxonomaid.adapters",
+    "taxonomaid.services",
+    "taxonomaid.bootstrap",
+    "taxonomaid.cli",
+    "taxonomaid.config",
+    "taxonomaid.logging",
+]
+
+[[tool.importlinter.contracts]]
+name = "ports only depend on domain"
+type = "forbidden"
+source_modules = ["taxonomaid.ports"]
+forbidden_modules = [
+    "taxonomaid.adapters",
+    "taxonomaid.services",
+    "taxonomaid.bootstrap",
+    "taxonomaid.cli",
+    "taxonomaid.config",
+    "taxonomaid.logging",
+]
+
+[[tool.importlinter.contracts]]
+name = "services do not import adapters or composition root"
+type = "forbidden"
+source_modules = ["taxonomaid.services"]
+forbidden_modules = [
+    "taxonomaid.adapters",
+    "taxonomaid.bootstrap",
+    "taxonomaid.cli",
+]
+
+[[tool.importlinter.contracts]]
+name = "adapters do not import services or composition root"
+type = "forbidden"
+source_modules = ["taxonomaid.adapters"]
+forbidden_modules = [
+    "taxonomaid.services",
+    "taxonomaid.bootstrap",
+    "taxonomaid.cli",
+]

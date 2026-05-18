@@ -1,0 +1,22 @@
+# Notifier configuration.
+#
+# When `telegram:` is set, the daemon talks directly to the Telegram
+# Bot API (inline-keyboard approve/reject + threaded replies). Any
+# non-`tgram://` Apprise URLs configured alongside it are fanned out
+# via a composite outbound (every channel gets the prompt; a
+# transient outage on one doesn't tear down the others). A duplicate
+# `tgram://` URL is silently dropped to avoid double-prompting.
+#
+# Apprise URL examples (used only when `telegram:` is unset):
+#   tgram://<bot_token>/<chat_id>            # Telegram via Apprise (no inline keyboard)
+#   slack://<token_a>/<token_b>/<token_c>    # Slack
+#   discord://<webhook_id>/<webhook_token>   # Discord
+#   ntfys://<server>/<topic>                 # ntfy
+
+apprise_urls: []
+
+telegram:
+  bot_token: ${TELEGRAM_BOT_TOKEN}
+  chat_id: ${TELEGRAM_CHAT_ID}
+
+# poll_timeout_s: 30.0

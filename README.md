@@ -1,1 +1,298 @@
 # Taxonomaid
+
+> Hybrid auto-sorter for shared folders. Cheap deterministic rules first;
+> an LLM agent fills the gaps; the LLM's good decisions are mined back into
+> rules so the LLM is invoked less and less over time.
+
+## Status
+
+**All planned phases shipped.** The package contains the multi-root
+dispatcher, real LLM classification (Gemini Flash by default; any
+OpenAI-compatible endpoint supported), Apprise + Telegram notifier,
+custom rule engine with anchors / coherence guards / year-template
+substitution, pattern miner with `taxonomaid review`, feedback loop
+(recently-moved cache + token-Jaccard similarity bias on filenames -
+embedding-based similarity is a future swap behind the same interface),
+directory auditor, systemd packaging (`deploy/`), and Docker / Compose
+deployment (`Dockerfile`, `compose.yaml`).
+
+See [`planning.md`](planning.md) for the full design and
+[`CHANGELOG.md`](CHANGELOG.md) for what each phase delivered.
+
+## Quick start
+
+```bash
+git clone https://github.com/gdanielski/Taxonomaid.git
+cd Taxonomaid
+uv sync --all-groups
+
+cp config/watches.example.yaml   config/watches.yaml
+cp config/llm.example.yaml       config/llm.yaml
+cp config/notifier.example.yaml  config/notifier.yaml
+
+# .env is auto-loaded from the repo root. Shell exports still take
+# precedence; pick whichever you prefer.
+cat > .env <<'EOF'
+GEMINI_API_KEY=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=...
+EOF
+
+uv run taxonomaid doctor    # validates config
+uv run taxonomaid run       # main loop
+```
+
+Full instructions live in [`docs/getting-started.md`](docs/getting-started.md)
+and the rendered MkDocs site (`uv run mkdocs serve`).
+
+## Telegram setup
+
+The daemon's preferred reply channel is a Telegram bot in a private
+1-on-1 chat. Three values land in `.env`:
+
+```
+TELEGRAM_BOT_TOKEN=123456789:AA...
+TELEGRAM_CHAT_ID=987654321
+```
+
+To get them:
+
+1. **Create the bot.** Open Telegram → message [`@BotFather`](https://t.me/BotFather)
+   → `/newbot` → pick a name and a username. BotFather prints a token
+   on the form `<numeric_id>:<long-string>`. That's `TELEGRAM_BOT_TOKEN`.
+   Treat it like a password.
+
+2. **Start a chat with your new bot.** Search Telegram for the username
+   BotFather gave you, open the chat, tap **Start**, and send any
+   message (e.g. `hi`). The chat must be initiated by you before the
+   bot can reply.
+
+3. **Find the chat ID.** Two easy options:
+
+   - Message [`@userinfobot`](https://t.me/userinfobot); it replies
+     with your numeric user ID, which is also your private-chat
+     `chat_id`.
+   - Or curl `getUpdates` once:
+     ```bash
+     curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates"
+     ```
+     Find `"chat":{"id":987654321,...,"type":"private"}` in the JSON.
+
+4. **Drop both into `.env`** alongside your `GEMINI_API_KEY`.
+
+5. **Verify the wiring.** `taxonomaid health` does a one-shot probe
+   against Gemini and the Telegram Bot API and exits non-zero on
+   failure:
+
+   ```bash
+   uv run taxonomaid health
+   ```
+
+   It also warns if your `chat_id` resolves to a group rather than a
+   private chat — in a group, every member can press the inline
+   approve / reject buttons, which is rarely what you want. Use a
+   private chat unless you intentionally want group-wide approvals.
+
+When `telegram:` is set in `notifier.yaml`, the daemon talks to the
+Bot API directly (inline keyboard buttons, threaded replies for
+custom paths). Non-`tgram://` Apprise URLs (Slack, Discord, ntfy)
+configured alongside Telegram are fanned out via a composite
+outbound — every channel gets the prompt; a transient outage on one
+doesn't tear down the others.
+
+### Reviewing rule proposals on Telegram
+
+Once the miner has accumulated enough decisions, it surfaces
+candidate rules to be promoted into the always-fast deterministic
+path. Two ways to review them:
+
+- **CLI** (`taxonomaid review`) — full experience, inline regex
+  editing, full sample list. Best when you have many proposals at
+  once or want to tweak a regex before approving.
+- **Telegram** — type `/review` in the chat with your bot. The
+  daemon walks the queue one proposal at a time with
+  `[✅ Approve]` / `[❌ Reject]` buttons; tapping either applies
+  the decision and sends the next proposal. After the last one,
+  the bot sends a "review complete" summary.
+
+`taxonomaid mine` (run weekly via the systemd timer or manually)
+also sends a one-line nudge — *"📐 You have 3 new rule proposals"*
+— when the queue is non-empty and a Telegram outbound is
+configured. Pass `--no-notify` for silent batch jobs.
+
+## Production deployment
+
+Two supported targets — pick whichever fits your host.
+
+### Docker Compose
+
+Pre-built multi-arch images (linux/amd64 + linux/arm64) ship to GitHub
+Container Registry on every `vX.Y.Z` git tag. API keys go in as
+**Docker secrets**; the chat ID is plain env.
+
+```yaml
+services:
+  taxonomaid:
+    # Pin to a version tag in production to avoid surprise updates.
+    image: ghcr.io/gdanielski/taxonomaid:latest
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      TELEGRAM_CHAT_ID: "987654321"
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
+    secrets:
+      - gemini_api_key
+      - telegram_bot_token
+    volumes:
+      - ./config:/config:rw
+      - ./data:/data
+      - /volume1/docs:/volume1/docs:rw
+
+secrets:
+  gemini_api_key:
+    file: ./secrets/gemini_api_key.txt
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token.txt
+```
+
+```bash
+mkdir -p secrets
+printf '%s' '<your-gemini-key>'     > secrets/gemini_api_key.txt
+printf '%s' '<your-telegram-token>' > secrets/telegram_bot_token.txt
+chmod 600 secrets/*
+
+docker compose pull        # grab the latest image from GHCR
+docker compose up -d
+docker compose logs -f taxonomaid
+```
+
+If you'd rather build from the working tree (e.g. while hacking),
+uncomment the `build: .` line in `compose.yaml` and run
+`docker compose up -d --build`.
+
+The image follows the standard `*_FILE` convention (Postgres / MySQL /
+Redis style): every env var ending in `_FILE` whose value is a
+readable file path is consumed at startup and exposed under the
+suffix-stripped name. Run one-off commands the usual way:
+
+```bash
+docker compose run --rm taxonomaid doctor
+docker compose run --rm taxonomaid mine
+docker compose run --rm taxonomaid audit
+docker compose run --rm taxonomaid review
+```
+
+Full Docker notes (UID/GID matrix, healthcheck behaviour, log
+rotation) live in [`deploy/README.md`](deploy/README.md).
+
+### systemd user service (any Linux box)
+
+Secrets are kept out of `/proc/<pid>/environ` via systemd's
+`LoadCredential=` (v247+), which mounts each secret as a file in
+the service's private `$CREDENTIALS_DIRECTORY` tmpfs. The shipped
+unit then points the daemon's `*_FILE` env vars at it.
+
+```bash
+uv tool install .            # or `pipx install .`
+deploy/install.sh            # creates secrets/ + installs unit files
+
+# Drop your secrets into the credential store
+printf '%s' '<your-gemini-key>'      > ~/.config/taxonomaid/secrets/gemini_api_key
+printf '%s' '<your-telegram-token>'  > ~/.config/taxonomaid/secrets/telegram_bot_token
+
+# Set TELEGRAM_CHAT_ID via a drop-in (the chat ID isn't a credential,
+# but it lives outside the YAML)
+systemctl --user edit taxonomaid.service
+# add:
+#   [Service]
+#   Environment=TELEGRAM_CHAT_ID=987654321
+
+$EDITOR ~/.config/taxonomaid/watches.yaml
+
+# Add your watched + destination roots to ReadWritePaths= in the unit
+# (the daemon runs with ProtectHome=read-only). The CLI prints the
+# exact line:
+taxonomaid systemd-paths -c ~/.config/taxonomaid \
+                         -d ~/.local/share/taxonomaid/data
+
+systemctl --user daemon-reload
+systemctl --user enable --now taxonomaid.service
+journalctl --user -u taxonomaid.service -f
+```
+
+The shipped unit is hardened (`NoNewPrivileges`, `ProtectSystem=strict`,
+`MemoryDenyWriteExecute`, empty `CapabilityBoundingSet`, etc.) and
+supports TPM-backed encrypted credentials via `LoadCredentialEncrypted=`
+on systemd v250.5+. Full details and hardening rationale in
+[`deploy/README.md`](deploy/README.md).
+
+### Log rotation
+
+Both decision logs grow monotonically. A logrotate snippet sized for
+personal-NAS workloads ships at
+[`deploy/logrotate.conf`](deploy/logrotate.conf); edit the paths,
+drop it into `/etc/logrotate.d/`, done.
+
+## Set-and-forget guarantees
+
+Designed to run unattended on a NAS without producing notification
+storms or letting work pile up silently:
+
+- **LLM circuit breaker.** A sustained Gemini outage no longer
+  floods Telegram with one prompt per file. After 3 consecutive
+  errors the circuit trips: subsequent files are parked silently
+  in `_unsorted/` and the operator gets exactly one "LLM
+  unavailable" alert. When the LLM recovers, one "back online"
+  message reports how many files were parked during the outage.
+  Configurable via the `LLMCircuit` constructor; the default
+  (3 failures, 60 s cooldown) suits most deployments.
+
+- **`_unsorted/` backlog detection.** The weekly audit timer flags
+  `_unsorted/` directories where 5+ files have been waiting at
+  least 7 days, so forgotten parked decisions don't pile up. The
+  same digest covers year-drift and category-drift findings.
+
+- **Audit notifications.** `taxonomaid audit --notify` sends a
+  Telegram digest when findings exist. The systemd audit timer
+  wires `--notify` automatically; interactive runs default to the
+  stdout-only behaviour. Set
+  `--unsorted-min-files 0` to disable the unsorted check, or
+  override thresholds with `--unsorted-min-files` /
+  `--unsorted-min-age-days`.
+
+## Architecture at a glance
+
+`taxonomaid` is a hexagonal (ports-and-adapters) Python package:
+
+```
+domain     pure types, errors                       (no internal imports)
+ports      typing.Protocol interfaces               (depends on domain)
+services   orchestration                            (depends on ports + domain)
+adapters   concrete implementations                 (depends on ports + domain)
+bootstrap  composition root                         (depends on everything)
+```
+
+The layering is enforced by `import-linter` contracts in
+`pyproject.toml`. See [ADR 0001](docs/adr/0001-hexagonal-layering.md) for
+the reasoning.
+
+## Development
+
+```bash
+uv sync --all-groups
+uv run pre-commit install
+
+# Full quality gate (mirrors CI)
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy
+uv run bandit -r src/taxonomaid -c pyproject.toml
+uv run lint-imports
+uv run pytest -m "unit or integration" --cov
+uv run mkdocs build --strict
+```
+
+## License
+
+MIT - see [`LICENSE`](LICENSE).

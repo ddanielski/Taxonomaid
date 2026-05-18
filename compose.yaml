@@ -1,0 +1,71 @@
+# Sample Docker Compose deployment for a NAS.
+#
+# Secrets workflow
+# ----------------
+# Two of the three pieces of secret material - the Gemini API key and
+# the Telegram bot token - are passed as Docker secrets. The chat ID
+# isn't a secret (knowing it doesn't let an attacker do anything
+# without the bot token) so it stays as a plain env var.
+#
+# Setup:
+#   mkdir -p secrets
+#   printf '%s' '<your-gemini-key>'      > secrets/gemini_api_key.txt
+#   printf '%s' '<your-telegram-token>'  > secrets/telegram_bot_token.txt
+#   chmod 600 secrets/*
+#
+#   $EDITOR compose.yaml             # set TELEGRAM_CHAT_ID, bind paths
+#   docker compose up -d
+#
+# The image follows the standard ``*_FILE`` convention: any
+# environment variable ending in ``_FILE`` is consumed at startup
+# and exposed under the suffix-stripped name with the file's
+# contents as its value.
+#
+# UID/GID
+# -------
+# The image runs as ``uid=1000``, matching the first non-root user
+# on Synology DSM and most Linux desktops. If your host's 1000 is
+# something else, rebuild with ``--build-arg UID=...`` or
+# ``chown -R 1000:1000`` the bind-mounted directories - otherwise
+# every move fails with EPERM. Healthy + EPERM in the logs == this.
+
+services:
+  taxonomaid:
+    # Production deployments pull the published image from GHCR -
+    # ``docker compose pull && docker compose up -d`` is enough on
+    # the NAS, no build context required. Pin to a version tag in
+    # production (e.g. ``:0.1.0``) so a fresh ``latest`` push doesn't
+    # silently update your daemon.
+    image: ghcr.io/gdanielski/taxonomaid:latest
+    # Hackers / local-build path: uncomment ``build: .`` to rebuild
+    # from the working tree on every ``docker compose up`` instead of
+    # pulling. Compose prefers a local build when ``build:`` is set
+    # even if the image tag also exists in GHCR.
+    # build: .
+    container_name: taxonomaid
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      # Plaintext: the chat ID is not a credential.
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:?set TELEGRAM_CHAT_ID in .env}
+      # ``*_FILE`` indirection: the daemon reads each path at startup
+      # and exposes the contents under the suffix-stripped name.
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
+    secrets:
+      - gemini_api_key
+      - telegram_bot_token
+    volumes:
+      # `:rw` so `mine` / `review` can update proposed_rules.yaml etc.
+      - ./config:/config:rw
+      - ./data:/data
+      # Edit this to point at the directory you actually want organised.
+      - /volume1/docs:/volume1/docs:rw
+    # The Dockerfile already declares HEALTHCHECK ["taxonomaid", "health"]
+    # so we don't override it here.
+
+secrets:
+  gemini_api_key:
+    file: ./secrets/gemini_api_key.txt
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token.txt

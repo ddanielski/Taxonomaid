@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Taxonomaid directory auditor weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,34 @@
+# LLM provider configuration.
+#
+# Default targets Google Gemini Flash Lite via Gemini's OpenAI-compatible
+# endpoint. Switching providers is purely a config change:
+#   - OpenAI:    base_url: https://api.openai.com/v1
+#   - Ollama:    base_url: http://localhost:11434/v1, model: llama3.1:8b
+#   - vLLM:      base_url: http://<host>:8000/v1
+#   - LocalAI:   base_url: http://<host>:8080/v1
+#
+# Tunable defaults live in src/taxonomaid/config/defaults.py. Every
+# field below is OPTIONAL; if you remove an entry it falls back to (in
+# priority order):
+#   1. an explicit value here,
+#   2. an environment variable like TAXONOMAID_LLM_<FIELD> in .env,
+#   3. the default in defaults.py.
+#
+# `api_key` is the only required field. Reference secrets via ${ENV_VAR}.
+
+api_key: ${GEMINI_API_KEY}
+
+# Override examples (uncomment to take effect):
+# model: gemini-3.1-flash-lite
+# base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+# request_timeout_s: 30.0
+# max_excerpt_chars: 262144       # cap on the character length of the
+#                                 # text excerpt fed to the LLM (default
+#                                 # 256 KiB, ~64 K tokens). The legacy
+#                                 # `max_excerpt_bytes:` key is accepted
+#                                 # as an alias.
+
+# thresholds:
+#   auto_move: 0.75
+#   auto_create_folder: 0.85
+#   auto_promote_rule: 0.97

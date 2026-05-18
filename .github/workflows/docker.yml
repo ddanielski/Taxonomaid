@@ -1,0 +1,118 @@
+name: Docker publish
+
+# Triggers
+# --------
+# - ``push`` of a ``v*`` tag is the canonical release path. Tagging
+#   ``v1.2.3`` produces:
+#     * ghcr.io/<owner>/<repo>:1.2.3   (exact)
+#     * ghcr.io/<owner>/<repo>:1.2     (minor)
+#     * ghcr.io/<owner>/<repo>:1       (major)
+#     * ghcr.io/<owner>/<repo>:latest  (only for non-prerelease tags)
+#
+# - ``workflow_dispatch`` lets you force a manual rebuild from the
+#   Actions tab without cutting a new tag - useful for iterating on
+#   the Dockerfile itself. Manual runs publish the ``edge`` tag only;
+#   ``latest`` is reserved for tagged releases so a pull never
+#   regresses to a half-baked dev build.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Override tag for manual runs (defaults to 'edge')."
+        required: false
+        default: edge
+
+# We need:
+#   - contents:read   to clone
+#   - packages:write  to push to GHCR
+# Everything else stays at the default deny.
+permissions:
+  contents: read
+  packages: write
+
+# Two pushes for the same tag would be a configuration mistake; cancel
+# the older run.
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build and push (multi-arch)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU is required for the arm64 emulated build on an amd64
+      # runner. Slow but acceptable for a release-only workflow.
+      - name: Set up QEMU (arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # GHCR uses the workflow's auto-provisioned GITHUB_TOKEN; no
+      # extra secret to manage. ``${{ github.actor }}`` is the user
+      # who triggered the run; the token's ``packages:write`` scope
+      # comes from the ``permissions:`` block above.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The ``metadata-action`` derives the tag set from the git ref:
+      # for a semver tag it emits ``X.Y.Z``, ``X.Y``, ``X`` and (on
+      # non-prerelease tags) ``latest``. For ``workflow_dispatch`` it
+      # falls through to ``edge`` (or whatever the dispatch input
+      # supplies). It also generates OCI labels (org.opencontainers.*)
+      # so ``docker inspect`` reports source/revision/version.
+      - name: Compute tags + labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # ``flavor`` controls the default ``latest`` behaviour. We
+          # opt out of the built-in default and re-enable it via an
+          # explicit rule below so prereleases never bump ``latest``.
+          flavor: |
+            latest=false
+          tags: |
+            # Release tag → 1.2.3
+            type=semver,pattern={{version}}
+            # Release tag → 1.2
+            type=semver,pattern={{major}}.{{minor}}
+            # Release tag → 1
+            type=semver,pattern={{major}}
+            # Only stable releases (no ``-rc1`` etc.) bump ``latest``.
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            # Manual dispatch: emit the ``edge`` (or input override)
+            # tag without touching ``latest``.
+            type=raw,value=${{ inputs.tag || 'edge' }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # amd64 covers most NAS hardware (Intel-based Synology,
+          # generic x86 servers); arm64 covers Synology DSM on ARM
+          # boxes, Raspberry Pi 4/5, and Apple Silicon dev machines.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache via GHA. Free, dramatically speeds up the
+          # second multi-arch build of the same Dockerfile.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Provenance + SBOM are emitted by default on
+          # build-push-action v5+. They land alongside the image in
+          # GHCR and are visible via ``docker buildx imagetools
+          # inspect``; cost ~nothing, useful for any future audit.
+          provenance: true
+          sbom: true

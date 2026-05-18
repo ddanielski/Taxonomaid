@@ -1,0 +1,21 @@
+[Unit]
+Description=Taxonomaid directory auditor (one-shot)
+After=taxonomaid.service
+
+[Service]
+Type=oneshot
+
+# The auditor doesn't currently call the LLM, but the loader still
+# resolves the API key during ``taxonomaid audit`` startup so a
+# missing key triggers a noisy ``ConfigError`` rather than a silent
+# half-validated run. Same credential plumbing as the main unit.
+LoadCredential=gemini_api_key:%h/.config/taxonomaid/secrets/gemini_api_key
+Environment=GEMINI_API_KEY_FILE=%d/gemini_api_key
+
+ExecStart=%h/.local/bin/taxonomaid audit --config-dir %h/.config/taxonomaid --data-dir %h/.local/share/taxonomaid/data --notify
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.config/taxonomaid %h/.local/share/taxonomaid
+SuccessExitStatus=0 1

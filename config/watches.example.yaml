@@ -1,0 +1,25 @@
+# Multi-root watcher configuration.
+#
+# Each entry declares one watched root. The dispatcher walks the union of
+# these roots; each root has its own destination tree and its own rule set.
+#
+# Path semantics:
+#   - `path` and `destination_root`: filesystem locations the daemon
+#     watches / writes into. Use absolute paths in production
+#     (`./test-watch` is convenient for local development; on a NAS
+#     point at `/volume1/docs` or wherever your real data lives).
+#   - `rules_file`: a relative value resolves against THIS file's
+#     directory (i.e. `rules.yaml` means "the rules file next to this
+#     watches.yaml"). That keeps the same YAML working identically
+#     when the daemon is launched from the repo root, from a Docker
+#     container with `WORKDIR /app`, or from a systemd unit that
+#     defaults `WorkingDirectory=` to `/`. An absolute path is
+#     respected verbatim - useful for a multi-tenant deployment with
+#     a shared rule store.
+
+watches:
+  - path: ./test-watch
+    destination_root: ./test-watch
+    recursive: true
+    rules_file: rules.yaml
+    unsorted_dir: _unsorted

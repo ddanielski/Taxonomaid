@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Taxonomaid pattern miner weekly
+
+[Timer]
+OnCalendar=Mon *-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

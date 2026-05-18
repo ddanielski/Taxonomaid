@@ -1,0 +1,49 @@
+# Rule definitions for the deterministic rule engine.
+#
+# Selection: the dispatcher picks the rule with the highest weight*confidence
+# whose `coherence` checks pass; if none pass, control hands off to the LLM.
+#
+# Rule fields:
+#   id                    Stable identifier; auto-generated rules use mined_<hash>.
+#   match.filename_regex  Regex; supports inline (?i) for case-insensitive.
+#   match.ext             Optional list of extensions, with the leading dot.
+#   match.mime_types      Optional list of MIME types.
+#   match.content_keywords Optional substrings that must appear in extracted text.
+#   destination_template  Path template. {year} is the only placeholder
+#                         currently supported; any other placeholder makes
+#                         the rule fail to fire.
+#   coherence.year_match  When true, the year detected in the file must match
+#                         the year placeholder in the destination.
+#   weight                Static priority, [0, +inf). Default 1.0.
+#   confidence            Learned score in [0, 1]. Default 1.0 for hand rules.
+#   anchored              When true, the rule is immune to auto-demote/auto-modify.
+#   source                hand | auto_promoted | user_inferred | notifier_confirmed.
+#   sample_count          Number of decisions backing the confidence score.
+
+rules:
+  # Worked example: route US tax PDFs into per-year folders, but only when the
+  # year mentioned in the filename matches the destination's {year} placeholder
+  # (the coherence guard prevents 2024 documents from landing in Taxes/2025/).
+  - id: tax_pdf_to_year
+    match:
+      filename_regex: '(?i)\b(tax|irs|1040|w-?2)\b'
+      ext: [.pdf]
+    destination_template: 'Finance/Taxes/{year}/'
+    coherence:
+      year_match: true
+    weight: 1.0
+    anchored: true
+    source: hand
+    confidence: 1.0
+    sample_count: 0
+
+  # Receipts go to a flat folder; cheap, no coherence guard.
+  - id: receipts_pdf
+    match:
+      filename_regex: '(?i)\breceipt\b'
+      ext: [.pdf, .jpg, .jpeg, .png]
+    destination_template: 'Finance/Receipts/'
+    weight: 0.8
+    source: hand
+    confidence: 1.0
+    sample_count: 0

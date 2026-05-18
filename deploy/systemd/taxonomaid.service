@@ -1,0 +1,83 @@
+[Unit]
+Description=Taxonomaid hybrid auto-sorter
+Documentation=https://github.com/gdanielski/Taxonomaid
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# --- Secrets via systemd's credential store (preferred) -------------
+# `LoadCredential=` reads each secret file at service start and exposes
+# it as ``$CREDENTIALS_DIRECTORY/<name>`` on a private tmpfs only the
+# service can read - it does NOT land in /proc/<pid>/environ the way
+# ``EnvironmentFile=`` would. The ``%d`` specifier expands to the same
+# directory inside ``Environment=``, so we point the daemon's
+# documented ``*_FILE`` indirection at it.
+#
+# The on-disk files at the LoadCredential= source paths still need
+# ``chmod 600`` so a different process running as the same user can't
+# read the originals; the install script does that for you. For TPM-
+# bound encryption-at-rest see deploy/README.md (`systemd-creds
+# encrypt` + ``LoadCredentialEncrypted=``); requires systemd v250.5+.
+#
+# `LoadCredential=NAME:PATH` requires systemd v247 (late 2020). On
+# older systemd, replace these two lines with the single legacy
+# ``EnvironmentFile=-%h/.config/taxonomaid/env`` directive.
+LoadCredential=gemini_api_key:%h/.config/taxonomaid/secrets/gemini_api_key
+LoadCredential=telegram_bot_token:%h/.config/taxonomaid/secrets/telegram_bot_token
+
+Environment=GEMINI_API_KEY_FILE=%d/gemini_api_key
+Environment=TELEGRAM_BOT_TOKEN_FILE=%d/telegram_bot_token
+# Chat ID is not a credential; ``${TELEGRAM_CHAT_ID}`` is interpolated
+# into ``notifier.yaml``. Override this line in a drop-in (e.g.
+# ``systemctl --user edit taxonomaid.service``) so package updates
+# don't clobber it.
+Environment=TELEGRAM_CHAT_ID=
+
+ExecStart=%h/.local/bin/taxonomaid run --config-dir %h/.config/taxonomaid --data-dir %h/.local/share/taxonomaid/data --json-logs
+Restart=on-failure
+RestartSec=5s
+
+# Hardening: no escalations, restrict filesystem to user-owned paths.
+# ``ReadWritePaths=`` is **additive across drop-ins**, so the line
+# below grants only the daemon's own state directories. The operator's
+# watched + destination roots are added via a drop-in at
+# ``~/.config/systemd/user/taxonomaid.service.d/readwritepaths.conf``;
+# generate that drop-in by running:
+#
+#   taxonomaid systemd-paths --write-dropin -c %h/.config/taxonomaid \
+#                                           -d %h/.local/share/taxonomaid/data
+#
+# The drop-in survives ``deploy/install.sh`` reruns; editing this
+# shipped file would be lost on the next install.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.config/taxonomaid %h/.local/share/taxonomaid
+
+# Defence in depth: every Protect/Restrict below is free for a pure
+# Python daemon. Kernel writes, module loads, cgroup writes, raw
+# sockets, and SUID/SGID transitions are all unreachable from the
+# code paths Taxonomaid exercises, so the kernel can refuse them.
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# Drop every capability; the daemon never needs any of them.
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=default.target
