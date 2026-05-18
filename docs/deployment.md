@@ -40,22 +40,45 @@ If you watch directories outside `${HOME}` (e.g. a NAS bind-mount under
 
 ## Docker Compose
 
+Pre-built multi-arch images (`linux/amd64` + `linux/arm64`) are
+published to GHCR on every `vX.Y.Z` git tag at
+`ghcr.io/ddanielski/taxonomaid`. To build from a local checkout
+instead, uncomment the `build: .` line in `compose.yaml` and run
+`docker compose up -d --build`.
+
 ```bash
-docker build -t taxonomaid:latest .
+# Drop secrets in:
+mkdir -p secrets
+printf '%s' '<gemini-key>'      > secrets/gemini_api_key.txt
+printf '%s' '<telegram-token>'  > secrets/telegram_bot_token.txt
+chmod 600 secrets/*
 
-# Edit ./config/{watches,llm,notifier,rules}.yaml and create a .env file
-# with GEMINI_API_KEY (and optionally TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID).
-
+docker compose pull
 docker compose up -d
 docker compose logs -f taxonomaid
 ```
 
 The image uses `python:3.12-slim`, runs as `uid=1000`, declares
 `/config` and `/data` as volumes, and ships a `HEALTHCHECK` that
-re-validates the configuration via `taxonomaid doctor` every five
-minutes - so misconfigurations surface in `docker ps`.
+runs `taxonomaid health` (probes the LLM endpoint and the Telegram
+Bot API) every five minutes, so transient outages surface in
+`docker ps`.
 
-One-off operations:
+### Path env vars
+
+The image sets two env vars so subcommands find the right paths
+without each invocation having to repeat `--config-dir /config
+--data-dir /data`:
+
+| Env var | Default in the image | CLI flag (wins over env) |
+|---|---|---|
+| `TAXONOMAID_CONFIG_DIR` | `/config` | `--config-dir`, `-c` |
+| `TAXONOMAID_DATA_DIR` | `/data` | `--data-dir`, `-d` |
+
+These work outside Docker too - export them in your shell or
+systemd unit and every subcommand picks them up.
+
+### One-off operations
 
 ```bash
 docker compose run --rm taxonomaid doctor
