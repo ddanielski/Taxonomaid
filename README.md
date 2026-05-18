@@ -6,18 +6,25 @@
 
 ## Status
 
-**All planned phases shipped.** The package contains the multi-root
-dispatcher, real LLM classification (Gemini Flash by default; any
-OpenAI-compatible endpoint supported), Apprise + Telegram notifier,
-custom rule engine with anchors / coherence guards / year-template
-substitution, pattern miner with `taxonomaid review`, feedback loop
-(recently-moved cache + token-Jaccard similarity bias on filenames -
-embedding-based similarity is a future swap behind the same interface),
-directory auditor, systemd packaging (`deploy/`), and Docker / Compose
-deployment (`Dockerfile`, `compose.yaml`).
+Feature-complete. What's in the box:
 
-See [`planning.md`](planning.md) for the full design and
-[`CHANGELOG.md`](CHANGELOG.md) for what each phase delivered.
+- Multi-root dispatcher with rule-first / LLM-fallback flow.
+- LLM client for any OpenAI-compatible endpoint (Gemini Flash by
+  default; OpenAI, Ollama, vLLM, LocalAI, LM Studio all work).
+- Apprise outbound + Telegram inbound notifier.
+- Rule engine with anchors, coherence guards, year-template
+  substitution.
+- Pattern miner with a `taxonomaid review` CLI and Telegram
+  `/review` command.
+- Feedback loop: recently-moved cache + token-Jaccard filename
+  similarity bias (embeddings are a future swap behind the same
+  interface).
+- Directory auditor.
+- Packaging: systemd unit files (`deploy/`) and a Docker / Compose
+  setup (`Dockerfile`, `compose.yaml`).
+
+[`planning.md`](planning.md) has the full design;
+[`CHANGELOG.md`](CHANGELOG.md) has the phase-by-phase log.
 
 ## Quick start
 
@@ -47,8 +54,8 @@ and the rendered MkDocs site (`uv run mkdocs serve`).
 
 ## Telegram setup
 
-The daemon's preferred reply channel is a Telegram bot in a private
-1-on-1 chat. Three values land in `.env`:
+The daemon answers via a Telegram bot in a private 1-on-1 chat.
+Three values go in `.env`:
 
 ```
 TELEGRAM_BOT_TOKEN=123456789:AA...
@@ -234,31 +241,29 @@ personal-NAS workloads ships at
 [`deploy/logrotate.conf`](deploy/logrotate.conf); edit the paths,
 drop it into `/etc/logrotate.d/`, done.
 
-## Set-and-forget guarantees
+## Running unattended
 
-Designed to run unattended on a NAS without producing notification
-storms or letting work pile up silently:
+A few features keep notifications quiet during outages and surface
+work that has been quietly piling up:
 
-- **LLM circuit breaker.** A sustained Gemini outage no longer
-  floods Telegram with one prompt per file. After 3 consecutive
-  errors the circuit trips: subsequent files are parked silently
-  in `_unsorted/` and the operator gets exactly one "LLM
-  unavailable" alert. When the LLM recovers, one "back online"
-  message reports how many files were parked during the outage.
-  Configurable via the `LLMCircuit` constructor; the default
-  (3 failures, 60 s cooldown) suits most deployments.
+- **LLM circuit breaker.** Three consecutive LLM errors trip a
+  circuit. While it's open, files are parked in `_unsorted/`
+  without a per-file Telegram prompt - you get one "LLM
+  unavailable" message instead of one per file. When the LLM is
+  reachable again, one "back online" message reports how many
+  files were parked during the outage. Defaults: 3 failures,
+  60 s cooldown.
 
-- **`_unsorted/` backlog detection.** The weekly audit timer flags
+- **`_unsorted/` backlog finding.** The weekly audit reports
   `_unsorted/` directories where 5+ files have been waiting at
-  least 7 days, so forgotten parked decisions don't pile up. The
-  same digest covers year-drift and category-drift findings.
+  least 7 days, alongside the existing year-drift and
+  category-drift findings.
 
-- **Audit notifications.** `taxonomaid audit --notify` sends a
-  Telegram digest when findings exist. The systemd audit timer
-  wires `--notify` automatically; interactive runs default to the
-  stdout-only behaviour. Set
-  `--unsorted-min-files 0` to disable the unsorted check, or
-  override thresholds with `--unsorted-min-files` /
+- **`taxonomaid audit --notify`.** Sends a Telegram digest when
+  findings exist; silent otherwise. The shipped audit timer turns
+  this on; interactive runs default to stdout-only. Pass
+  `--unsorted-min-files 0` to disable the backlog check or tweak
+  thresholds with `--unsorted-min-files` /
   `--unsorted-min-age-days`.
 
 ## Architecture at a glance
