@@ -34,6 +34,25 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
+# UID/GID for the in-image ``taxonomaid`` user. Override at build
+# time when your host's first non-root user isn't 1000:1000:
+#
+#   docker build --build-arg UID=1026 --build-arg GID=100 .
+#
+# Or via compose:
+#
+#   build:
+#     args:
+#       UID: ${PUID}
+#       GID: ${PGID}
+#
+# Compose users on the GHCR image don't need to rebuild - just set
+# ``user: "${PUID}:${PGID}"`` in compose.yaml to override the
+# runtime UID/GID. The build-arg path matters when ``/app`` itself
+# needs to be writable, which the daemon never does.
+ARG UID=1000
+ARG GID=1000
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:${PATH}" \
@@ -44,7 +63,8 @@ WORKDIR /app
 
 COPY --from=builder /app /app
 
-RUN useradd --system --create-home --uid 1000 taxonomaid \
+RUN groupadd --system --gid ${GID} taxonomaid \
+ && useradd --system --create-home --uid ${UID} --gid ${GID} taxonomaid \
  && mkdir -p /config /data \
  && chown -R taxonomaid:taxonomaid /app /config /data
 

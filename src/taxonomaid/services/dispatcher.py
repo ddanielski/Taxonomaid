@@ -267,7 +267,21 @@ class Dispatcher:
         if self._deps.notifier_inbound is not None:
             await self._deps.notifier_inbound.stop()
 
-    async def _bootstrap_existing_files(self) -> None:
+    async def bootstrap_all(self) -> None:
+        """One-shot bootstrap walk for the ``taxonomaid bootstrap`` CLI.
+
+        Like ``run()`` this runs orphan-pending recovery and warms
+        the similarity index, but instead of starting the watcher
+        loop it processes every existing file in every watch and
+        returns. Used by the CLI command to onboard pre-existing
+        files on demand (vs. the per-watch ``bootstrap_existing``
+        flag that fires on daemon startup).
+        """
+        await self._recover_orphan_pending()
+        await self._warm_similarity_index()
+        await self._bootstrap_existing_files(force_all=True)
+
+    async def _bootstrap_existing_files(self, *, force_all: bool = False) -> None:
         """Process pre-existing files in watches with ``bootstrap_existing=true``.
 
         ``inotify`` only fires on new events, so files that already
@@ -287,8 +301,17 @@ class Dispatcher:
         here. A bootstrap of 100 files at 1 s/file is 1.5 minutes,
         which is the right cost for "I just deployed and want my
         existing files classified."
+
+        Args:
+            force_all: When True (CLI ``bootstrap`` invocation),
+                walk every watch unconditionally regardless of the
+                per-watch ``bootstrap_existing`` flag. The flag's
+                semantics are "auto-run on daemon start"; explicit
+                CLI invocation overrides that.
         """
-        watches = [w for w in self._deps.config.watches.watches if w.bootstrap_existing]
+        watches = [
+            w for w in self._deps.config.watches.watches if force_all or w.bootstrap_existing
+        ]
         if not watches:
             return
         for watch in watches:

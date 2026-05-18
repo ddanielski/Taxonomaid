@@ -42,6 +42,12 @@ from taxonomaid.services import (
     probe_telegram,
     probe_telegram_chat_is_private,
 )
+from taxonomaid.services.dispatcher import Dispatcher, DispatcherDeps
+from taxonomaid.services.dry_run_wrappers import (
+    DryRunDecisionLog,
+    DryRunFilesystem,
+    DryRunPendingLog,
+)
 
 app = typer.Typer(
     name="taxonomaid",
@@ -219,6 +225,110 @@ def run(
         asyncio.run(_run_until_signalled(application))
     except KeyboardInterrupt:
         _console.print("[yellow]interrupted[/yellow]")
+
+
+@app.command()
+def bootstrap(
+    config_dir: Path = typer.Option(  # noqa: B008
+        _DEFAULT_CONFIG_DIR,
+        "--config-dir",
+        "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
+    ),
+    data_dir: Path = typer.Option(  # noqa: B008
+        Path("data"),
+        "--data-dir",
+        "-d",
+        envvar="TAXONOMAID_DATA_DIR",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help=(
+            "Preview classifications without committing. The LLM is "
+            "still invoked (to show what it would say on real data) "
+            "but no files are moved and no decision/pending entries "
+            "are written."
+        ),
+    ),
+    json_logs: bool = typer.Option(
+        False,
+        "--json-logs",
+        help="Emit structured JSON logs instead of pretty console output.",
+    ),
+) -> None:
+    """Walk every watched root once and process pre-existing files.
+
+    inotify only fires on new events, so files already in a watch
+    root when the daemon first starts are otherwise invisible. This
+    command walks every watch (regardless of the per-watch
+    ``bootstrap_existing`` flag) and feeds each file through the
+    dispatcher's normal pipeline.
+
+    With ``--dry-run`` the LLM is invoked for real on each file
+    but every side effect (move, decision-log append, pending-log
+    append, Telegram notify) is suppressed; the operator can review
+    the resulting "would..." log lines before re-running without
+    the flag.
+    """
+    _load_env(config_dir)
+    watches_path, llm_path, notifier_path = _config_paths(config_dir)
+    try:
+        application = build_app_from_paths(
+            watches_path=watches_path,
+            llm_path=llm_path,
+            notifier_path=notifier_path,
+            data_dir=data_dir,
+            log_json=json_logs,
+        )
+    except TaxonomaidError as exc:
+        _console.print(f"[red]config error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    try:
+        asyncio.run(_run_bootstrap(application, dry_run=dry_run))
+    except KeyboardInterrupt:
+        _console.print("[yellow]interrupted[/yellow]")
+
+
+async def _run_bootstrap(application: App, *, dry_run: bool) -> None:
+    """Build the bootstrap dispatcher and run a single walk.
+
+    In dry-run mode, the filesystem / decision log / pending log
+    are wrapped with read-through, write-discard decorators and
+    the notifier is set to ``None``. The dispatcher itself is
+    unchanged - dry-run safety comes from the wrappers.
+    """
+    if dry_run:
+        original = application.dispatcher._deps
+        deps = DispatcherDeps(
+            config=original.config,
+            rule_engine=original.rule_engine,
+            llm=original.llm,
+            notifier_outbound=None,
+            notifier_inbound=None,
+            filesystem=DryRunFilesystem(original.filesystem),
+            decision_log=DryRunDecisionLog(original.decision_log),
+            pending_log=DryRunPendingLog(original.pending_log),
+            watcher=original.watcher,
+            clock=original.clock,
+            similarity=original.similarity,
+            rule_engines_by_root=original.rule_engines_by_root,
+            review_session=None,
+            llm_circuit=original.llm_circuit,
+        )
+        dispatcher = Dispatcher(deps)
+        _console.print(
+            "[yellow]dry-run:[/yellow] LLM will be called on each file; "
+            "no moves, no log writes, no notifications.",
+        )
+    else:
+        dispatcher = application.dispatcher
+
+    try:
+        await dispatcher.bootstrap_all()
+    finally:
+        await application.aclose()
 
 
 @app.command()

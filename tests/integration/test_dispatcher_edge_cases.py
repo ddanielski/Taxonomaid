@@ -36,6 +36,11 @@ from taxonomaid.ports import LLMResponse, NotifierResponse, NotifierResponseKind
 from taxonomaid.services import ReviewPaths, ReviewSession
 from taxonomaid.services.circuit_breaker import CircuitState, LLMCircuit
 from taxonomaid.services.dispatcher import Dispatcher, DispatcherDeps
+from taxonomaid.services.dry_run_wrappers import (
+    DryRunDecisionLog,
+    DryRunFilesystem,
+    DryRunPendingLog,
+)
 from taxonomaid.services.rule_engine import RuleEngine
 from tests.conftest import (
     FakeNotifierInbound,
@@ -1439,3 +1444,130 @@ async def test_bootstrap_existing_off_by_default_processes_nothing(
 
     assert llm.calls == []
     assert (watch_root / "doc.pdf").exists()
+
+
+async def test_bootstrap_all_walks_every_watch_regardless_of_flag(
+    tmp_path: Path,
+) -> None:
+    """``bootstrap_all`` (CLI entry point) ignores the per-watch flag.
+
+    The per-watch ``bootstrap_existing`` field is for the daemon
+    startup scan. When the operator explicitly invokes
+    ``taxonomaid bootstrap``, every watch is processed regardless.
+    """
+    watch_a = tmp_path / "a"
+    watch_b = tmp_path / "b"
+    watch_a.mkdir()
+    watch_b.mkdir()
+    (watch_a / "Reports").mkdir()
+    (watch_b / "Reports").mkdir()
+    file_a = watch_a / "doc-a.pdf"
+    file_b = watch_b / "doc-b.pdf"
+    _drop(file_a)
+    _drop(file_b)
+
+    config = AppConfig(
+        watches=WatchesConfig(
+            watches=(
+                # Both flags False; bootstrap_all should still scan them.
+                WatchConfig(path=watch_a, destination_root=watch_a),
+                WatchConfig(path=watch_b, destination_root=watch_b),
+            ),
+        ),
+        llm=LLMConfig(
+            api_key="x",
+            thresholds=Thresholds(
+                auto_move=0.75,
+                auto_create_folder=0.85,
+                auto_promote_rule=0.97,
+            ),
+        ),
+        notifier=NotifierConfig(),
+        data_dir=tmp_path / "data",
+    )
+    llm = RecordedLLM(
+        [
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+        ],
+    )
+    deps = DispatcherDeps(
+        config=config,
+        rule_engine=RuleEngine(rules=()),
+        llm=llm,
+        notifier_outbound=None,
+        notifier_inbound=None,
+        filesystem=LocalFilesystem(),
+        decision_log=JsonlDecisionLog(config.data_dir / "decisions.jsonl"),
+        pending_log=JsonlPendingLog(config.data_dir / "pending_decisions.jsonl"),
+        watcher=FakeWatcher([]),
+        clock=SystemClock(),
+        debounce_s=0.0,
+    )
+    await Dispatcher(deps).bootstrap_all()
+
+    # Both files moved without ever flagging bootstrap_existing.
+    assert len(llm.calls) == 2
+    assert (watch_a / "Reports" / "doc-a.pdf").exists()
+    assert (watch_b / "Reports" / "doc-b.pdf").exists()
+    assert not file_a.exists()
+    assert not file_b.exists()
+
+
+async def test_bootstrap_all_with_dry_run_wrappers_makes_no_changes(
+    tmp_path: Path,
+) -> None:
+    """End-to-end dry-run: LLM is invoked, but no files move and no logs persist.
+
+    Mirrors what ``taxonomaid bootstrap --dry-run`` does on the CLI:
+    wraps the real adapters with the dry-run decorators and runs
+    ``bootstrap_all``. Asserts that:
+
+    - the LLM saw every file (so the operator gets to see what
+      it would say on real data);
+    - no files were actually moved;
+    - the decision log on disk has zero records;
+    - the pending log on disk has zero records.
+    """
+    watch_root = tmp_path / "watch"
+    watch_root.mkdir()
+    (watch_root / "Reports").mkdir()
+    file_a = watch_root / "doc-a.pdf"
+    file_b = watch_root / "doc-b.pdf"
+    _drop(file_a)
+    _drop(file_b)
+
+    config = _config(watch_root, data_dir=tmp_path / "data")
+    llm = RecordedLLM(
+        [
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+        ],
+    )
+    real_decision_log = JsonlDecisionLog(config.data_dir / "decisions.jsonl")
+    real_pending_log = JsonlPendingLog(config.data_dir / "pending_decisions.jsonl")
+    deps = DispatcherDeps(
+        config=config,
+        rule_engine=RuleEngine(rules=()),
+        llm=llm,
+        notifier_outbound=None,  # mirrors the CLI's dry-run wiring
+        notifier_inbound=None,
+        filesystem=DryRunFilesystem(LocalFilesystem()),
+        decision_log=DryRunDecisionLog(real_decision_log),
+        pending_log=DryRunPendingLog(real_pending_log),
+        watcher=FakeWatcher([]),
+        clock=SystemClock(),
+        debounce_s=0.0,
+    )
+    await Dispatcher(deps).bootstrap_all()
+
+    # LLM saw both files — the dry-run point.
+    assert len(llm.calls) == 2
+    # ...but neither was moved.
+    assert file_a.exists()
+    assert file_b.exists()
+    assert not (watch_root / "Reports" / "doc-a.pdf").exists()
+    assert not (watch_root / "Reports" / "doc-b.pdf").exists()
+    # ...and nothing landed on disk in the audit logs.
+    assert not (config.data_dir / "decisions.jsonl").exists()
+    assert not (config.data_dir / "pending_decisions.jsonl").exists()
