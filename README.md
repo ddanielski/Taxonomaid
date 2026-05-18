@@ -4,17 +4,12 @@
 [![Docs](https://img.shields.io/github/actions/workflow/status/ddanielski/Taxonomaid/docs.yml?branch=main&label=docs&logo=materialformkdocs)](https://github.com/ddanielski/Taxonomaid/actions/workflows/docs.yml)
 [![Docker](https://img.shields.io/github/actions/workflow/status/ddanielski/Taxonomaid/docker.yml?label=docker&logo=docker)](https://github.com/ddanielski/Taxonomaid/actions/workflows/docker.yml)
 [![Tests](https://img.shields.io/badge/tests-373%20passed-brightgreen?logo=pytest&logoColor=white)](https://github.com/ddanielski/Taxonomaid/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/ddanielski/Taxonomaid?logo=codecov&logoColor=white)](https://app.codecov.io/gh/ddanielski/Taxonomaid)
+[![codecov](https://codecov.io/github/ddanielski/Taxonomaid/graph/badge.svg?token=8TH3J6U3VS)](https://codecov.io/github/ddanielski/Taxonomaid)
 
-[![Release](https://img.shields.io/github/v/release/ddanielski/Taxonomaid?include_prereleases&sort=semver&logo=github&label=release)](https://github.com/ddanielski/Taxonomaid/releases)
+[![Version](https://img.shields.io/github/v/tag/ddanielski/Taxonomaid?sort=semver&logo=github&label=version)](https://github.com/ddanielski/Taxonomaid/tags)
 [![GHCR image](https://img.shields.io/badge/ghcr.io-ddanielski%2Ftaxonomaid-2496ED?logo=docker&logoColor=white)](https://github.com/ddanielski/Taxonomaid/pkgs/container/taxonomaid)
 [![License: MIT](https://img.shields.io/github/license/ddanielski/Taxonomaid?color=brightgreen)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
-
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Mypy: strict](https://img.shields.io/badge/types-mypy%20strict-1f5082?logo=python&logoColor=white)](http://mypy-lang.org/)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](.pre-commit-config.yaml)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 > Hybrid auto-sorter for shared folders. Cheap deterministic rules first;
 > an LLM agent fills the gaps; the LLM's good decisions are mined back into
