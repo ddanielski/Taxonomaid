@@ -23,13 +23,10 @@ Feature-complete. What's in the box:
 - Packaging: systemd unit files (`deploy/`) and a Docker / Compose
   setup (`Dockerfile`, `compose.yaml`).
 
-[`planning.md`](planning.md) has the full design;
-[`CHANGELOG.md`](CHANGELOG.md) has the phase-by-phase log.
-
 ## Quick start
 
 ```bash
-git clone https://github.com/gdanielski/Taxonomaid.git
+git clone https://github.com/ddanielski/Taxonomaid.git
 cd Taxonomaid
 uv sync --all-groups
 
@@ -141,7 +138,7 @@ Container Registry on every `vX.Y.Z` git tag. API keys go in as
 services:
   taxonomaid:
     # Pin to a version tag in production to avoid surprise updates.
-    image: ghcr.io/gdanielski/taxonomaid:latest
+    image: ghcr.io/ddanielski/taxonomaid:latest
     restart: unless-stopped
     user: "1000:1000"
     environment:

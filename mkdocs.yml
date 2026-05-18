@@ -1,7 +1,7 @@
 site_name: Taxonomaid
 site_description: Hybrid auto-sorter for shared folders that learns LLM decisions back into rules.
-site_url: https://danielski.github.io/Taxonomaid/
-repo_url: https://github.com/gdanielski/Taxonomaid
+site_url: https://ddanielski.github.io/Taxonomaid/
+repo_url: https://github.com/ddanielski/Taxonomaid
 repo_name: danielski/Taxonomaid
 
 theme:

@@ -40,6 +40,4 @@ review CLI, recently-moved tracking with token-Jaccard filename
 similarity (embeddings are a future swap behind the same
 interface), directory auditor, systemd packaging, Docker / Compose.
 
-[`planning.md`](https://github.com/gdanielski/Taxonomaid/blob/main/planning.md)
-has the full design;
-[Architecture](architecture.md) has a component tour.
+See [Architecture](architecture.md) for a component tour.

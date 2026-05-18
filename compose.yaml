@@ -36,7 +36,7 @@ services:
     # the NAS, no build context required. Pin to a version tag in
     # production (e.g. ``:0.1.0``) so a fresh ``latest`` push doesn't
     # silently update your daemon.
-    image: ghcr.io/gdanielski/taxonomaid:latest
+    image: ghcr.io/ddanielski/taxonomaid:latest
     # Hackers / local-build path: uncomment ``build: .`` to rebuild
     # from the working tree on every ``docker compose up`` instead of
     # pulling. Compose prefers a local build when ``build:`` is set

@@ -2,8 +2,7 @@
 
 Combines deterministic rules with an LLM fallback that learns its decisions
 back into rules over time. The package is organised as a hexagonal
-ports-and-adapters architecture; see [planning.md](../../planning.md) for the
-full design.
+ports-and-adapters architecture.
 """
 
 from __future__ import annotations

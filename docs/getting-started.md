@@ -9,7 +9,7 @@
 ## Install for development
 
 ```bash
-git clone https://github.com/gdanielski/Taxonomaid.git
+git clone https://github.com/ddanielski/Taxonomaid.git
 cd Taxonomaid
 uv sync --all-groups
 ```
