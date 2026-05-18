@@ -1,59 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/architecture/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/architecture/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/configuration/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/configuration/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/deployment/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/deployment/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/getting-started/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/getting-started/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/adr/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/adr/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/adr/0001-hexagonal-layering/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/adr/0001-hexagonal-layering/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/adapters/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/adapters/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/bootstrap/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/bootstrap/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/config/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/config/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/domain/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/domain/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/ports/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/ports/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
     <url>
-         <loc>https://danielski.github.io/Taxonomaid/reference/services/</loc>
+         <loc>https://ddanielski.github.io/Taxonomaid/reference/services/</loc>
          <lastmod>2026-05-18</lastmod>
     </url>
 </urlset>
