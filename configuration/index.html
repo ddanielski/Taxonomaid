@@ -936,11 +936,23 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>Every YAML file in <code>config/</code> has a corresponding pydantic model. Loading
-any file that fails validation raises
-<a class="autorefs autorefs-internal" title="ConfigError" href="../reference/domain/#taxonomaid.domain.errors.ConfigError"><code>ConfigError</code></a> and the daemon refuses to
-start. Secrets are referenced as <code>${ENV_VAR}</code> placeholders; the loader
-resolves them from the process environment.</p>
+<p>Every YAML file in <code>config/</code> has a corresponding pydantic model.
+Loading any file that fails validation raises
+<a class="autorefs autorefs-internal" title="ConfigError" href="../reference/domain/#taxonomaid.domain.errors.ConfigError"><code>ConfigError</code></a> and the daemon refuses
+to start.</p>
+<p>Secrets are referenced as <code>${ENV_VAR}</code> placeholders; the loader
+resolves them in two ways:</p>
+<ul>
+<li><code>ENV_VAR</code> itself, read directly from the process environment.</li>
+<li><code>ENV_VAR_FILE</code>, read as a path to a file containing the secret
+  (Postgres / MySQL / Redis convention). This is what the Docker
+  image, <code>compose.yaml</code>, and the systemd unit's <code>LoadCredential=</code>
+  use, so secrets stay out of <code>/proc/&lt;pid&gt;/environ</code>.</li>
+</ul>
+<p>Path env vars - <code>TAXONOMAID_CONFIG_DIR</code>, <code>TAXONOMAID_DATA_DIR</code> -
+are honoured by every CLI subcommand as fallbacks for
+<code>--config-dir</code> / <code>--data-dir</code>. The Docker image bakes them in to
+<code>/config</code> and <code>/data</code>.</p>
 <h2 id="watchesyaml"><code>watches.yaml</code><a class="headerlink" href="#watchesyaml" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Multi-root watcher configuration.</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1">#</span>
@@ -1034,20 +1046,19 @@ Ollama, vLLM, LocalAI, LM Studio, ...).</p>
 <a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
 <a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="c1"># poll_timeout_s: 30.0</span>
 </code></pre></div>
-<p>See <a class="autorefs autorefs-internal" title="NotifierConfig" href="../reference/config/#taxonomaid.config.models.NotifierConfig"><code>NotifierConfig</code></a>. Outbound has
-two paths today:</p>
+<p>See <a class="autorefs autorefs-internal" title="NotifierConfig" href="../reference/config/#taxonomaid.config.models.NotifierConfig"><code>NotifierConfig</code></a>. Outbound
+delivery follows whatever you configure:</p>
 <ul>
 <li>When <code>telegram:</code> is set, the daemon talks <strong>directly</strong> to the
-  Telegram Bot API to ship inline-keyboard approve/reject buttons and
-  threaded reply support. Inbound is wired the same way.</li>
-<li>When <code>telegram:</code> is unset, outbound flows through <strong>Apprise</strong> to
-  whichever URLs you configure in <code>apprise_urls</code>.</li>
+  Telegram Bot API for inline-keyboard approve / reject buttons and
+  threaded reply support. Inbound replies use the same connection.</li>
+<li>When <code>apprise_urls</code> is set, outbound also fans out through
+  <strong>Apprise</strong> to whichever channels you list (Slack, Discord, ntfy,
+  email, ...).</li>
+<li>When both are set, a composite outbound dispatches to Telegram
+  and the Apprise URLs in parallel; a transient failure on one
+  channel doesn't block the others.</li>
 </ul>
-<p>Mixing the two ("Telegram direct <em>and</em> Apprise fan-out to Slack at the
-same time") is a known gap: the bootstrap currently logs a warning and
-ignores <code>apprise_urls</code> whenever <code>telegram:</code> is set. A composite
-outbound is a TODO tracked in <code>bootstrap.py</code>. For now pick one
-delivery mode.</p>
 <h2 id="rulesyaml"><code>rules.yaml</code><a class="headerlink" href="#rulesyaml" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Rule definitions for the deterministic rule engine.</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">#</span>
@@ -1099,8 +1110,12 @@ delivery mode.</p>
 <a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a><span class="w">    </span><span class="nt">confidence</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 <a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a><span class="w">    </span><span class="nt">sample_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
 </code></pre></div>
-<p>The rule schema is documented inline; the matcher and scorer arrive in
-Phase 2.</p>
+<p>The rule schema is documented inline. Each rule has a <code>match</code>
+spec (filename regex / extension / MIME type), a
+<code>destination_template</code> with <code>{year}</code> substitution, optional
+<code>coherence</code> guards, and a scoring weight. The dispatcher picks the
+highest <code>weight * confidence</code> rule whose coherence checks pass; if
+none pass, control falls through to the LLM.</p>
 
 
 
