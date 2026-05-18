@@ -1269,3 +1269,173 @@ async def test_llm_circuit_blocks_calls_inside_cooldown(tmp_path: Path) -> None:
     assert circuit.skipped_count == 1
     # File ended up in _unsorted/.
     assert (watch_root / "_unsorted" / "f.pdf").exists()
+
+
+# ---- Bootstrap of pre-existing files (#1c set-and-forget posture) ---
+
+
+async def test_bootstrap_existing_processes_files_already_in_watch_root(
+    tmp_path: Path,
+) -> None:
+    """``bootstrap_existing=true`` walks the watch on startup.
+
+    Models the first-deploy case: files exist in the watch root
+    *before* the daemon starts listening on inotify. Without the
+    bootstrap, those files would sit there forever invisible to
+    the daemon.
+    """
+    watch_root = tmp_path / "watch"
+    watch_root.mkdir()
+    (watch_root / "Reports").mkdir()
+    pre_existing = [
+        watch_root / "doc-1.pdf",
+        watch_root / "doc-2.pdf",
+        watch_root / "subfolder" / "doc-3.pdf",
+    ]
+    for f in pre_existing:
+        _drop(f)
+
+    config = AppConfig(
+        watches=WatchesConfig(
+            watches=(
+                WatchConfig(
+                    path=watch_root,
+                    destination_root=watch_root,
+                    bootstrap_existing=True,
+                ),
+            ),
+        ),
+        llm=LLMConfig(
+            api_key="x",
+            thresholds=Thresholds(
+                auto_move=0.75,
+                auto_create_folder=0.85,
+                auto_promote_rule=0.97,
+            ),
+        ),
+        notifier=NotifierConfig(),
+        data_dir=tmp_path / "data",
+    )
+
+    llm = RecordedLLM(
+        [
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+            LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r"),
+        ],
+    )
+    deps = DispatcherDeps(
+        config=config,
+        rule_engine=RuleEngine(rules=()),
+        llm=llm,
+        notifier_outbound=None,
+        notifier_inbound=None,
+        filesystem=LocalFilesystem(),
+        decision_log=JsonlDecisionLog(config.data_dir / "decisions.jsonl"),
+        pending_log=JsonlPendingLog(config.data_dir / "pending_decisions.jsonl"),
+        watcher=FakeWatcher([]),  # No new events; bootstrap does the work.
+        clock=SystemClock(),
+        debounce_s=0.0,
+    )
+    await Dispatcher(deps).run()
+
+    # All three pre-existing files were classified by the LLM and moved.
+    assert len(llm.calls) == 3
+    for f in pre_existing:
+        assert not f.exists(), f"{f} should have been moved out of the watch root"
+    assert (watch_root / "Reports" / "doc-1.pdf").exists()
+    assert (watch_root / "Reports" / "doc-2.pdf").exists()
+    assert (watch_root / "Reports" / "doc-3.pdf").exists()
+
+
+async def test_bootstrap_existing_skips_files_in_unsorted(tmp_path: Path) -> None:
+    """The bootstrap walk skips files already parked in ``_unsorted/``.
+
+    Re-classifying them would double-emit pending entries for files
+    the operator has already been asked about. ``_recover_orphan_pending``
+    is the right path for those.
+    """
+    watch_root = tmp_path / "watch"
+    watch_root.mkdir()
+    (watch_root / "_unsorted").mkdir()
+    parked = watch_root / "_unsorted" / "already-parked.pdf"
+    fresh = watch_root / "fresh.pdf"
+    _drop(parked)
+    _drop(fresh)
+
+    config = AppConfig(
+        watches=WatchesConfig(
+            watches=(
+                WatchConfig(
+                    path=watch_root,
+                    destination_root=watch_root,
+                    bootstrap_existing=True,
+                ),
+            ),
+        ),
+        llm=LLMConfig(
+            api_key="x",
+            thresholds=Thresholds(
+                auto_move=0.75,
+                auto_create_folder=0.85,
+                auto_promote_rule=0.97,
+            ),
+        ),
+        notifier=NotifierConfig(),
+        data_dir=tmp_path / "data",
+    )
+    llm = RecordedLLM(
+        [LLMResponse(destination=Path("Reports"), confidence=0.95, reason="r")],
+    )
+    deps = DispatcherDeps(
+        config=config,
+        rule_engine=RuleEngine(rules=()),
+        llm=llm,
+        notifier_outbound=None,
+        notifier_inbound=None,
+        filesystem=LocalFilesystem(),
+        decision_log=JsonlDecisionLog(config.data_dir / "decisions.jsonl"),
+        pending_log=JsonlPendingLog(config.data_dir / "pending_decisions.jsonl"),
+        watcher=FakeWatcher([]),
+        clock=SystemClock(),
+        debounce_s=0.0,
+    )
+    await Dispatcher(deps).run()
+
+    # Only the fresh file went through the LLM. Parked file is untouched.
+    assert len(llm.calls) == 1
+    assert llm.calls[0][0] == "fresh.pdf"  # tuple[filename, excerpt]
+    assert parked.exists()
+
+
+async def test_bootstrap_existing_off_by_default_processes_nothing(
+    tmp_path: Path,
+) -> None:
+    """Without ``bootstrap_existing=true`` pre-existing files are ignored.
+
+    Otherwise a daemon restart on a busy folder would re-classify
+    thousands of files - exactly what we want to avoid.
+    """
+    watch_root = tmp_path / "watch"
+    watch_root.mkdir()
+    _drop(watch_root / "doc.pdf")
+
+    config = _config(watch_root, data_dir=tmp_path / "data")  # default flag = False
+    llm = RecordedLLM([])
+    deps = DispatcherDeps(
+        config=config,
+        rule_engine=RuleEngine(rules=()),
+        llm=llm,
+        notifier_outbound=None,
+        notifier_inbound=None,
+        filesystem=LocalFilesystem(),
+        decision_log=JsonlDecisionLog(config.data_dir / "decisions.jsonl"),
+        pending_log=JsonlPendingLog(config.data_dir / "pending_decisions.jsonl"),
+        watcher=FakeWatcher([]),
+        clock=SystemClock(),
+        debounce_s=0.0,
+    )
+    await Dispatcher(deps).run()
+
+    assert llm.calls == []
+    assert (watch_root / "doc.pdf").exists()

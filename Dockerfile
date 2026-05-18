@@ -54,9 +54,12 @@ VOLUME ["/config", "/data"]
 
 # `taxonomaid health` issues GET /models against the LLM endpoint and
 # GET /getMe against Telegram - both cheap and authenticated. A
-# five-minute cadence is plenty for a long-running daemon and won't
-# bump into Telegram's rate limit.
-HEALTHCHECK --interval=5m --timeout=15s --start-period=20s --retries=3 \
+# five-minute steady-state cadence is plenty for a long-running daemon
+# and won't bump into Telegram's rate limit. ``--start-interval=20s``
+# (Docker 25+) probes every 20 s during the start period so
+# ``Health=healthy`` shows up within ~30 s of ``up -d`` instead of
+# waiting a full five minutes.
+HEALTHCHECK --interval=5m --timeout=15s --start-period=20s --start-interval=20s --retries=3 \
     CMD ["taxonomaid", "health"]
 
 ENTRYPOINT ["taxonomaid"]
