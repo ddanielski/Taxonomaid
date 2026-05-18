@@ -235,10 +235,23 @@ class Dispatcher:
         """Run the dispatcher until cancelled."""
         await self._recover_orphan_pending()
         await self._warm_similarity_index()
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(self._watch_loop(), name="taxonomaid.watch")
-            if self._deps.notifier_inbound is not None:
-                tg.create_task(self._inbound_loop(), name="taxonomaid.inbound")
+        await self._bootstrap_existing_files()
+        watches = self._deps.config.watches.watches
+        _log.info(
+            "daemon_started",
+            watches=len(watches),
+            watch_paths=[str(w.path) for w in watches],
+            destination_roots=[str(w.destination_root) for w in watches],
+            llm_model=self._deps.config.llm.model,
+            llm_base_url=str(self._deps.config.llm.base_url),
+        )
+        try:
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(self._watch_loop(), name="taxonomaid.watch")
+                if self._deps.notifier_inbound is not None:
+                    tg.create_task(self._inbound_loop(), name="taxonomaid.inbound")
+        finally:
+            _log.info("daemon_stopped")
 
     async def stop(self) -> None:
         """Signal an orderly shutdown.
@@ -253,6 +266,77 @@ class Dispatcher:
         await self._deps.watcher.stop()
         if self._deps.notifier_inbound is not None:
             await self._deps.notifier_inbound.stop()
+
+    async def _bootstrap_existing_files(self) -> None:
+        """Process pre-existing files in watches with ``bootstrap_existing=true``.
+
+        ``inotify`` only fires on new events, so files that already
+        live in a watch root when the daemon starts are otherwise
+        invisible. With ``bootstrap_existing: true`` per watch, we
+        walk the root once at startup and feed every regular file
+        through the same pipeline as a fresh ADDED event.
+
+        Files inside the watch's ``unsorted_dir`` are skipped - the
+        crash-recovery path (``_recover_orphan_pending``) handles
+        those, and re-classifying parked files would just churn the
+        operator's review queue. Hidden files (``.foo``) are also
+        skipped by convention.
+
+        The walk is sequential: the LLM-roundtrip cadence enforced
+        by ``_watch_loop`` is the rate limit and the same applies
+        here. A bootstrap of 100 files at 1 s/file is 1.5 minutes,
+        which is the right cost for "I just deployed and want my
+        existing files classified."
+        """
+        watches = [w for w in self._deps.config.watches.watches if w.bootstrap_existing]
+        if not watches:
+            return
+        for watch in watches:
+            count = 0
+            unsorted_root = (watch.destination_root / watch.unsorted_dir).resolve()
+            try:
+                files = await asyncio.to_thread(
+                    _enumerate_existing_files,
+                    watch.path,
+                    watch.recursive,
+                    unsorted_root,
+                )
+            except OSError as exc:
+                _log.warning(
+                    "bootstrap_walk_failed",
+                    watch=str(watch.path),
+                    error=str(exc),
+                )
+                continue
+            _log.info(
+                "bootstrap_started",
+                watch=str(watch.path),
+                file_count=len(files),
+            )
+            for path in files:
+                event = FileEvent(
+                    path=path,
+                    kind=FileEventKind.ADDED,
+                    watch_root=watch.path,
+                    destination_root=watch.destination_root,
+                    unsorted_dir=watch.unsorted_dir,
+                )
+                try:
+                    await self._on_event(event)
+                except Exception as exc:
+                    _log.exception(
+                        "bootstrap_dispatch_failed",
+                        file=str(path),
+                        error=str(exc),
+                        error_type=type(exc).__name__,
+                    )
+                    continue
+                count += 1
+            _log.info(
+                "bootstrap_completed",
+                watch=str(watch.path),
+                files_processed=count,
+            )
 
     async def _recover_orphan_pending(self) -> None:
         """Reconcile pending entries whose ``unsorted_path`` no longer exists.
@@ -1153,6 +1237,55 @@ Bounded so a destination root with thousands of subdirectories doesn't
 blow the prompt token budget. Sorted by depth then name so the cap
 preferentially keeps shallower (more-likely-relevant) folders.
 """
+
+
+def _enumerate_existing_files(
+    watch_root: Path,
+    recursive: bool,
+    unsorted_root: Path,
+) -> tuple[Path, ...]:
+    """Yield regular files under ``watch_root`` for the bootstrap scan.
+
+    Skips:
+
+    - Anything inside ``unsorted_root`` (orphan recovery handles it).
+    - Hidden files (``.foo``) and hidden directories.
+    - Symlinks (avoids infinite loops; matches the watcher's stance).
+
+    Path resolution avoids :func:`Path.resolve` per entry because
+    that hammers the filesystem on a cold cache. The caller already
+    resolved ``unsorted_root`` once; we use ``Path.is_relative_to``
+    on the raw path under the assumption that the watcher hands
+    out paths with the same prefix shape.
+    """
+    if not watch_root.is_dir():
+        return ()
+    out: list[Path] = []
+    queue: list[Path] = [watch_root]
+    while queue:
+        directory = queue.pop()
+        try:
+            entries = list(directory.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if entry.name.startswith("."):
+                continue
+            try:
+                if entry.is_symlink():
+                    continue
+                if entry.is_dir():
+                    if not recursive:
+                        continue
+                    if entry.resolve() == unsorted_root:
+                        continue
+                    queue.append(entry)
+                    continue
+                if entry.is_file():
+                    out.append(entry)
+            except OSError:
+                continue
+    return tuple(out)
 
 
 def _candidate_destinations(event: FileEvent) -> tuple[Path, ...]:

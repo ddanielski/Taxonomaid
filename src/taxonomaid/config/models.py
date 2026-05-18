@@ -85,6 +85,14 @@ class WatchConfig(_StrictModel):
             user confirmation. Multi-segment paths are rejected so the
             pending-log structural recovery in ``JsonlPendingLog``
             remains valid.
+        bootstrap_existing: When True, scan this watch root on daemon
+            start and process every existing file as if it had just
+            been created. Useful for the first-deploy case: inotify
+            only fires on new events, so files already in the watch
+            root are otherwise invisible to the daemon. Defaults to
+            False so a daemon restart on a busy folder doesn't
+            accidentally re-classify thousands of files. Files
+            already inside ``unsorted_dir`` are always skipped.
     """
 
     path: Path
@@ -92,6 +100,7 @@ class WatchConfig(_StrictModel):
     recursive: bool = True
     rules_file: Path | None = None
     unsorted_dir: Path = Path("_unsorted")
+    bootstrap_existing: bool = False
 
     @field_validator("unsorted_dir")
     @classmethod

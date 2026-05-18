@@ -23,3 +23,8 @@ watches:
     recursive: true
     rules_file: rules.yaml
     unsorted_dir: _unsorted
+    # Set `bootstrap_existing: true` on the first deploy so the
+    # daemon walks the watch on startup and processes files that
+    # were already there before inotify started listening.
+    # Otherwise it'll only react to NEW file drops.
+    bootstrap_existing: false

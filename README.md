@@ -46,6 +46,13 @@ uv run taxonomaid doctor    # validates config
 uv run taxonomaid run       # main loop
 ```
 
+> **Pre-existing files.** The watcher uses inotify, which only
+> fires on new events — files already in a watch root when the
+> daemon starts are otherwise invisible. To process them on first
+> deploy, set `bootstrap_existing: true` on the watch in
+> `watches.yaml` (one-shot scan at daemon start) or just `touch`
+> the files to fake an event.
+
 Full instructions live in [`docs/getting-started.md`](docs/getting-started.md)
 and the rendered MkDocs site (`uv run mkdocs serve`).
 
@@ -137,10 +144,15 @@ Container Registry on every `vX.Y.Z` git tag. API keys go in as
 ```yaml
 services:
   taxonomaid:
-    # Pin to a version tag in production to avoid surprise updates.
-    image: ghcr.io/ddanielski/taxonomaid:latest
+    # Pin to a specific version tag in production to avoid surprise
+    # updates - :latest, :0.1, :0 all silently move under you.
+    image: ghcr.io/ddanielski/taxonomaid:0.1.0
     restart: unless-stopped
-    user: "1000:1000"
+    # Match the UID/GID that owns the watched + destination folders
+    # on the host. ``id <user>`` shows the right values; on most
+    # NAS hardware these aren't 1000:1000 (e.g. Synology DSM users
+    # often have GID=100 "users"). PUID/PGID come from .env.
+    user: "${PUID}:${PGID}"
     environment:
       TELEGRAM_CHAT_ID: "987654321"
       GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
@@ -158,6 +170,14 @@ secrets:
     file: ./secrets/gemini_api_key.txt
   telegram_bot_token:
     file: ./secrets/telegram_bot_token.txt
+```
+
+The `.env` file alongside `compose.yaml`:
+
+```dotenv
+# `id <your-user>` on the host shows these values.
+PUID=1000
+PGID=100
 ```
 
 ```bash
