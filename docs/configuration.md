@@ -1,10 +1,23 @@
 # Configuration
 
-Every YAML file in `config/` has a corresponding pydantic model. Loading
-any file that fails validation raises
-[`ConfigError`][taxonomaid.domain.ConfigError] and the daemon refuses to
-start. Secrets are referenced as `${ENV_VAR}` placeholders; the loader
-resolves them from the process environment.
+Every YAML file in `config/` has a corresponding pydantic model.
+Loading any file that fails validation raises
+[`ConfigError`][taxonomaid.domain.ConfigError] and the daemon refuses
+to start.
+
+Secrets are referenced as `${ENV_VAR}` placeholders; the loader
+resolves them in two ways:
+
+- `ENV_VAR` itself, read directly from the process environment.
+- `ENV_VAR_FILE`, read as a path to a file containing the secret
+  (Postgres / MySQL / Redis convention). This is what the Docker
+  image, `compose.yaml`, and the systemd unit's `LoadCredential=`
+  use, so secrets stay out of `/proc/<pid>/environ`.
+
+Path env vars - `TAXONOMAID_CONFIG_DIR`, `TAXONOMAID_DATA_DIR` -
+are honoured by every CLI subcommand as fallbacks for
+`--config-dir` / `--data-dir`. The Docker image bakes them in to
+`/config` and `/data`.
 
 ## `watches.yaml`
 
@@ -32,20 +45,18 @@ Ollama, vLLM, LocalAI, LM Studio, ...).
 --8<-- "config/notifier.example.yaml"
 ```
 
-See [`NotifierConfig`][taxonomaid.config.NotifierConfig]. Outbound has
-two paths today:
+See [`NotifierConfig`][taxonomaid.config.NotifierConfig]. Outbound
+delivery follows whatever you configure:
 
 - When `telegram:` is set, the daemon talks **directly** to the
-  Telegram Bot API to ship inline-keyboard approve/reject buttons and
-  threaded reply support. Inbound is wired the same way.
-- When `telegram:` is unset, outbound flows through **Apprise** to
-  whichever URLs you configure in `apprise_urls`.
-
-Mixing the two ("Telegram direct *and* Apprise fan-out to Slack at the
-same time") is a known gap: the bootstrap currently logs a warning and
-ignores `apprise_urls` whenever `telegram:` is set. A composite
-outbound is a TODO tracked in `bootstrap.py`. For now pick one
-delivery mode.
+  Telegram Bot API for inline-keyboard approve / reject buttons and
+  threaded reply support. Inbound replies use the same connection.
+- When `apprise_urls` is set, outbound also fans out through
+  **Apprise** to whichever channels you list (Slack, Discord, ntfy,
+  email, ...).
+- When both are set, a composite outbound dispatches to Telegram
+  and the Apprise URLs in parallel; a transient failure on one
+  channel doesn't block the others.
 
 ## `rules.yaml`
 
@@ -53,5 +64,9 @@ delivery mode.
 --8<-- "config/rules.example.yaml"
 ```
 
-The rule schema is documented inline; the matcher and scorer arrive in
-Phase 2.
+The rule schema is documented inline. Each rule has a `match`
+spec (filename regex / extension / MIME type), a
+`destination_template` with `{year}` substitution, optional
+`coherence` guards, and a scoring weight. The dispatcher picks the
+highest `weight * confidence` rule whose coherence checks pass; if
+none pass, control falls through to the LLM.

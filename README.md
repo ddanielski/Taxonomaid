@@ -178,7 +178,13 @@ uncomment the `build: .` line in `compose.yaml` and run
 The image follows the standard `*_FILE` convention (Postgres / MySQL /
 Redis style): every env var ending in `_FILE` whose value is a
 readable file path is consumed at startup and exposed under the
-suffix-stripped name. Run one-off commands the usual way:
+suffix-stripped name.
+
+The image also sets `TAXONOMAID_CONFIG_DIR=/config` and
+`TAXONOMAID_DATA_DIR=/data` so subcommands find the right paths
+without each invocation needing the `--config-dir` / `--data-dir`
+flags. CLI flags still override the env vars when you want them to.
+Run one-off commands the usual way:
 
 ```bash
 docker compose run --rm taxonomaid doctor

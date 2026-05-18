@@ -116,12 +116,14 @@ def doctor(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
         help="Directory containing watches.yaml, llm.yaml, notifier.yaml.",
     ),
     data_dir: Path = typer.Option(  # noqa: B008
         Path("data"),
         "--data-dir",
         "-d",
+        envvar="TAXONOMAID_DATA_DIR",
         help="Runtime data directory.",
     ),
 ) -> None:
@@ -182,11 +184,13 @@ def run(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
     data_dir: Path = typer.Option(  # noqa: B008
         Path("data"),
         "--data-dir",
         "-d",
+        envvar="TAXONOMAID_DATA_DIR",
     ),
     json_logs: bool = typer.Option(
         False,
@@ -223,11 +227,13 @@ def mine(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
     data_dir: Path = typer.Option(  # noqa: B008
         Path("data"),
         "--data-dir",
         "-d",
+        envvar="TAXONOMAID_DATA_DIR",
     ),
     min_samples: int = typer.Option(10, "--min-samples"),
     agreement: float = typer.Option(0.90, "--agreement"),
@@ -340,6 +346,7 @@ def review(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
 ) -> None:
     """Walk ``proposed_rules.yaml`` and approve / reject each entry interactively."""
@@ -405,6 +412,7 @@ def health(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
 ) -> None:
     """Probe LLM and Telegram reachability; exit 0 on healthy, 1 otherwise.
@@ -480,11 +488,13 @@ def systemd_paths(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
     data_dir: Path = typer.Option(  # noqa: B008
         Path("data"),
         "--data-dir",
         "-d",
+        envvar="TAXONOMAID_DATA_DIR",
     ),
     write_dropin: bool = typer.Option(
         False,
@@ -581,11 +591,13 @@ def audit(
         _DEFAULT_CONFIG_DIR,
         "--config-dir",
         "-c",
+        envvar="TAXONOMAID_CONFIG_DIR",
     ),
     data_dir: Path = typer.Option(  # noqa: B008
         Path("data"),
         "--data-dir",
         "-d",
+        envvar="TAXONOMAID_DATA_DIR",
     ),
     min_files: int = typer.Option(4, "--min-files"),
     unsorted_min_files: int = typer.Option(

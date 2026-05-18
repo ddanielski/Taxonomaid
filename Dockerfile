@@ -36,7 +36,9 @@ FROM python:${PYTHON_VERSION}-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:${PATH}"
+    PATH="/app/.venv/bin:${PATH}" \
+    TAXONOMAID_CONFIG_DIR=/config \
+    TAXONOMAID_DATA_DIR=/data
 
 WORKDIR /app
 
@@ -55,7 +57,7 @@ VOLUME ["/config", "/data"]
 # five-minute cadence is plenty for a long-running daemon and won't
 # bump into Telegram's rate limit.
 HEALTHCHECK --interval=5m --timeout=15s --start-period=20s --retries=3 \
-    CMD ["taxonomaid", "health", "-c", "/config"]
+    CMD ["taxonomaid", "health"]
 
 ENTRYPOINT ["taxonomaid"]
-CMD ["run", "--config-dir", "/config", "--data-dir", "/data", "--json-logs"]
+CMD ["run", "--json-logs"]
