@@ -45,22 +45,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # QEMU is required for the arm64 emulated build on an amd64
       # runner. Slow but acceptable for a release-only workflow.
       - name: Set up QEMU (arm64 emulation)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # GHCR uses the workflow's auto-provisioned GITHUB_TOKEN; no
       # extra secret to manage. ``${{ github.actor }}`` is the user
       # who triggered the run; the token's ``packages:write`` scope
       # comes from the ``permissions:`` block above.
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -74,7 +74,7 @@ jobs:
       # so ``docker inspect`` reports source/revision/version.
       - name: Compute tags + labels
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           # ``flavor`` controls the default ``latest`` behaviour. We
@@ -96,7 +96,7 @@ jobs:
             type=raw,value=${{ inputs.tag || 'edge' }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           # amd64 covers most NAS hardware (Intel-based Synology,
