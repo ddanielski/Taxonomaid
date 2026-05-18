@@ -830,6 +830,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#taxonomaid.services.dispatcher.Dispatcher.bootstrap_all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bootstrap_all
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1234,6 +1245,17 @@
     <span class="md-ellipsis">
       
         stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#taxonomaid.services.dispatcher.Dispatcher.bootstrap_all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bootstrap_all
       
     </span>
   </a>
@@ -1981,6 +2003,65 @@ breaking; the docstring carries the contract.</p>
 <a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">watcher</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
 <a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="taxonomaid.services.dispatcher.Dispatcher.bootstrap_all" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">bootstrap_all</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#taxonomaid.services.dispatcher.Dispatcher.bootstrap_all" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">bootstrap_all</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>One-shot bootstrap walk for the <code>taxonomaid bootstrap</code> CLI.</p>
+<p>Like <code>run()</code> this runs orphan-pending recovery and warms
+the similarity index, but instead of starting the watcher
+loop it processes every existing file in every watch and
+returns. Used by the CLI command to onboard pre-existing
+files on demand (vs. the per-watch <code>bootstrap_existing</code>
+flag that fires on daemon startup).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/taxonomaid/services/dispatcher.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-270">270</a></span>
+<span class="normal"><a href="#__codelineno-0-271">271</a></span>
+<span class="normal"><a href="#__codelineno-0-272">272</a></span>
+<span class="normal"><a href="#__codelineno-0-273">273</a></span>
+<span class="normal"><a href="#__codelineno-0-274">274</a></span>
+<span class="normal"><a href="#__codelineno-0-275">275</a></span>
+<span class="normal"><a href="#__codelineno-0-276">276</a></span>
+<span class="normal"><a href="#__codelineno-0-277">277</a></span>
+<span class="normal"><a href="#__codelineno-0-278">278</a></span>
+<span class="normal"><a href="#__codelineno-0-279">279</a></span>
+<span class="normal"><a href="#__codelineno-0-280">280</a></span>
+<span class="normal"><a href="#__codelineno-0-281">281</a></span>
+<span class="normal"><a href="#__codelineno-0-282">282</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bootstrap_all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;One-shot bootstrap walk for the ``taxonomaid bootstrap`` CLI.</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">    Like ``run()`` this runs orphan-pending recovery and warms</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">    the similarity index, but instead of starting the watcher</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">    loop it processes every existing file in every watch and</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">    returns. Used by the CLI command to onboard pre-existing</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">    files on demand (vs. the per-watch ``bootstrap_existing``</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">    flag that fires on daemon startup).</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recover_orphan_pending</span><span class="p">()</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_warm_similarity_index</span><span class="p">()</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bootstrap_existing_files</span><span class="p">(</span><span class="n">force_all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
