@@ -23,28 +23,46 @@
 #
 # UID/GID
 # -------
-# The image runs as ``uid=1000``, matching the first non-root user
-# on Synology DSM and most Linux desktops. If your host's 1000 is
-# something else, rebuild with ``--build-arg UID=...`` or
-# ``chown -R 1000:1000`` the bind-mounted directories - otherwise
-# every move fails with EPERM. Healthy + EPERM in the logs == this.
+# The image's default user is ``uid=1000:gid=1000`` (Linux
+# convention for the first non-root user). On a NAS where this
+# doesn't match the owner of your watched folders, set ``PUID``
+# and ``PGID`` in ``.env`` and the ``user:`` override below picks
+# them up:
+#
+#   # .env
+#   PUID=1026
+#   PGID=100
+#
+# That works with the prebuilt GHCR image - no rebuild required.
+# If you specifically need ``/app`` to also be owned by your UID
+# (rare; the daemon doesn't write there), uncomment the
+# ``build.args`` block to bake the UID/GID into the image at
+# build time.
 
 services:
   taxonomaid:
     # Production deployments pull the published image from GHCR -
     # ``docker compose pull && docker compose up -d`` is enough on
     # the NAS, no build context required. Pin to a version tag in
-    # production (e.g. ``:0.1.0``) so a fresh ``latest`` push doesn't
+    # production (e.g. ``:0.1.3``) so a fresh ``latest`` push doesn't
     # silently update your daemon.
     image: ghcr.io/ddanielski/taxonomaid:latest
-    # Hackers / local-build path: uncomment ``build: .`` to rebuild
-    # from the working tree on every ``docker compose up`` instead of
-    # pulling. Compose prefers a local build when ``build:`` is set
-    # even if the image tag also exists in GHCR.
-    # build: .
+    # local-build path: uncomment ``build:`` to rebuild
+    # from the working tree on every ``docker compose up`` instead
+    # of pulling. The ``args`` block bakes your host's UID/GID into
+    # the image so /app is owned by the right user; for most
+    # deployments the ``user:`` override below is enough.
+    # build:
+    #   context: .
+    #   args:
+    #     UID: ${PUID:-1000}
+    #     GID: ${PGID:-1000}
     container_name: taxonomaid
     restart: unless-stopped
-    user: "1000:1000"
+    # Runtime UID/GID override. ``${PUID}`` and ``${PGID}`` are
+    # read from ``.env`` (or the host environment); the ``:-1000``
+    # fallback keeps the image runnable without one.
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       # Plaintext: the chat ID is not a credential.
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:?set TELEGRAM_CHAT_ID in .env}

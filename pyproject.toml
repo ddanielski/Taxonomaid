@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taxonomaid"
-version = "0.1.0"
+version = "0.1.3"
 description = "Hybrid auto-sorter for shared folders: deterministic rules + LLM fallback that learns into rules over time."
 readme = "README.md"
 license = { file = "LICENSE" }

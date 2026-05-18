@@ -1,5 +1,21 @@
 # Taxonomaid
 
+[![CI](https://img.shields.io/github/actions/workflow/status/ddanielski/Taxonomaid/ci.yml?branch=main&label=CI&logo=github)](https://github.com/ddanielski/Taxonomaid/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/ddanielski/Taxonomaid/docs.yml?branch=main&label=docs&logo=materialformkdocs)](https://github.com/ddanielski/Taxonomaid/actions/workflows/docs.yml)
+[![Docker](https://img.shields.io/github/actions/workflow/status/ddanielski/Taxonomaid/docker.yml?label=docker&logo=docker)](https://github.com/ddanielski/Taxonomaid/actions/workflows/docker.yml)
+[![Tests](https://img.shields.io/badge/tests-373%20passed-brightgreen?logo=pytest&logoColor=white)](https://github.com/ddanielski/Taxonomaid/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/ddanielski/Taxonomaid?logo=codecov&logoColor=white)](https://app.codecov.io/gh/ddanielski/Taxonomaid)
+
+[![Release](https://img.shields.io/github/v/release/ddanielski/Taxonomaid?include_prereleases&sort=semver&logo=github&label=release)](https://github.com/ddanielski/Taxonomaid/releases)
+[![GHCR image](https://img.shields.io/badge/ghcr.io-ddanielski%2Ftaxonomaid-2496ED?logo=docker&logoColor=white)](https://github.com/ddanielski/Taxonomaid/pkgs/container/taxonomaid)
+[![License: MIT](https://img.shields.io/github/license/ddanielski/Taxonomaid?color=brightgreen)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
+
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Mypy: strict](https://img.shields.io/badge/types-mypy%20strict-1f5082?logo=python&logoColor=white)](http://mypy-lang.org/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](.pre-commit-config.yaml)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+
 > Hybrid auto-sorter for shared folders. Cheap deterministic rules first;
 > an LLM agent fills the gaps; the LLM's good decisions are mined back into
 > rules so the LLM is invoked less and less over time.
@@ -48,10 +64,14 @@ uv run taxonomaid run       # main loop
 
 > **Pre-existing files.** The watcher uses inotify, which only
 > fires on new events — files already in a watch root when the
-> daemon starts are otherwise invisible. To process them on first
-> deploy, set `bootstrap_existing: true` on the watch in
-> `watches.yaml` (one-shot scan at daemon start) or just `touch`
-> the files to fake an event.
+> daemon starts are otherwise invisible. Three ways to onboard
+> them:
+>
+> - `taxonomaid bootstrap` — one-shot CLI scan; supports `--dry-run`
+>   to preview what the LLM would do without moving anything.
+> - `bootstrap_existing: true` per-watch flag — same scan, but
+>   automatic on daemon startup.
+> - `touch <file>` — fake an inotify event for a specific file.
 
 Full instructions live in [`docs/getting-started.md`](docs/getting-started.md)
 and the rendered MkDocs site (`uv run mkdocs serve`).
@@ -146,13 +166,15 @@ services:
   taxonomaid:
     # Pin to a specific version tag in production to avoid surprise
     # updates - :latest, :0.1, :0 all silently move under you.
-    image: ghcr.io/ddanielski/taxonomaid:0.1.0
+    image: ghcr.io/ddanielski/taxonomaid:0.1.3
     restart: unless-stopped
     # Match the UID/GID that owns the watched + destination folders
     # on the host. ``id <user>`` shows the right values; on most
     # NAS hardware these aren't 1000:1000 (e.g. Synology DSM users
-    # often have GID=100 "users"). PUID/PGID come from .env.
-    user: "${PUID}:${PGID}"
+    # often have GID=100 "users"). PUID/PGID come from .env, with
+    # 1000:1000 as the fallback so the image is runnable out of
+    # the box on a standard Linux desktop.
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       TELEGRAM_CHAT_ID: "987654321"
       GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
