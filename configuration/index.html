@@ -979,6 +979,11 @@ are honoured by every CLI subcommand as fallbacks for
 <a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="nt">recursive</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">    </span><span class="nt">rules_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rules.yaml</span>
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">    </span><span class="nt">unsorted_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">_unsorted</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">    </span><span class="c1"># Set `bootstrap_existing: true` on the first deploy so the</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">    </span><span class="c1"># daemon walks the watch on startup and processes files that</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">    </span><span class="c1"># were already there before inotify started listening.</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">    </span><span class="c1"># Otherwise it&#39;ll only react to NEW file drops.</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">    </span><span class="nt">bootstrap_existing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </code></pre></div>
 <p>See <a class="autorefs autorefs-internal" title="WatchesConfig" href="../reference/config/#taxonomaid.config.models.WatchesConfig"><code>WatchesConfig</code></a> and
 <a class="autorefs autorefs-internal" title="WatchConfig" href="../reference/config/#taxonomaid.config.models.WatchConfig"><code>WatchConfig</code></a> for the full schema.</p>

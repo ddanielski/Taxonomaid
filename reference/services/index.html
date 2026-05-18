@@ -1888,14 +1888,40 @@ dispatcher's behaviour identical to pre-circuit semantics.</p>
 <span class="normal"><a href="#__codelineno-0-238">238</a></span>
 <span class="normal"><a href="#__codelineno-0-239">239</a></span>
 <span class="normal"><a href="#__codelineno-0-240">240</a></span>
-<span class="normal"><a href="#__codelineno-0-241">241</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span>
+<span class="normal"><a href="#__codelineno-0-242">242</a></span>
+<span class="normal"><a href="#__codelineno-0-243">243</a></span>
+<span class="normal"><a href="#__codelineno-0-244">244</a></span>
+<span class="normal"><a href="#__codelineno-0-245">245</a></span>
+<span class="normal"><a href="#__codelineno-0-246">246</a></span>
+<span class="normal"><a href="#__codelineno-0-247">247</a></span>
+<span class="normal"><a href="#__codelineno-0-248">248</a></span>
+<span class="normal"><a href="#__codelineno-0-249">249</a></span>
+<span class="normal"><a href="#__codelineno-0-250">250</a></span>
+<span class="normal"><a href="#__codelineno-0-251">251</a></span>
+<span class="normal"><a href="#__codelineno-0-252">252</a></span>
+<span class="normal"><a href="#__codelineno-0-253">253</a></span>
+<span class="normal"><a href="#__codelineno-0-254">254</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the dispatcher until cancelled.&quot;&quot;&quot;</span>
 <a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recover_orphan_pending</span><span class="p">()</span>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_warm_similarity_index</span><span class="p">()</span>
-<a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">TaskGroup</span><span class="p">()</span> <span class="k">as</span> <span class="n">tg</span><span class="p">:</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a>        <span class="n">tg</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_watch_loop</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;taxonomaid.watch&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-240" name="__codelineno-0-240"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-241" name="__codelineno-0-241"></a>            <span class="n">tg</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inbound_loop</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;taxonomaid.inbound&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bootstrap_existing_files</span><span class="p">()</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="n">watches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">watches</span><span class="o">.</span><span class="n">watches</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>        <span class="s2">&quot;daemon_started&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>        <span class="n">watches</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">watches</span><span class="p">),</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a>        <span class="n">watch_paths</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">watches</span><span class="p">],</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a>        <span class="n">destination_roots</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">destination_root</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">watches</span><span class="p">],</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a>        <span class="n">llm_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a>        <span class="n">llm_base_url</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">base_url</span><span class="p">),</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="p">)</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a>        <span class="k">async</span> <span class="k">with</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">TaskGroup</span><span class="p">()</span> <span class="k">as</span> <span class="n">tg</span><span class="p">:</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>            <span class="n">tg</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_watch_loop</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;taxonomaid.watch&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>                <span class="n">tg</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inbound_loop</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;taxonomaid.inbound&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="k">finally</span><span class="p">:</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>        <span class="n">_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;daemon_stopped&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1930,31 +1956,31 @@ breaking; the docstring carries the contract.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/services/dispatcher.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-243">243</a></span>
-<span class="normal"><a href="#__codelineno-0-244">244</a></span>
-<span class="normal"><a href="#__codelineno-0-245">245</a></span>
-<span class="normal"><a href="#__codelineno-0-246">246</a></span>
-<span class="normal"><a href="#__codelineno-0-247">247</a></span>
-<span class="normal"><a href="#__codelineno-0-248">248</a></span>
-<span class="normal"><a href="#__codelineno-0-249">249</a></span>
-<span class="normal"><a href="#__codelineno-0-250">250</a></span>
-<span class="normal"><a href="#__codelineno-0-251">251</a></span>
-<span class="normal"><a href="#__codelineno-0-252">252</a></span>
-<span class="normal"><a href="#__codelineno-0-253">253</a></span>
-<span class="normal"><a href="#__codelineno-0-254">254</a></span>
-<span class="normal"><a href="#__codelineno-0-255">255</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Signal an orderly shutdown.</span>
-<a id="__codelineno-0-245" name="__codelineno-0-245"></a>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    Sets the stop events on the watcher and inbound notifier and</span>
-<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">    returns immediately - it does **not** wait for :meth:`run` to</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a><span class="sd">    finish. The CLI&#39;s ``_run_until_signalled`` is what actually</span>
-<a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="sd">    awaits the running ``run()`` task to drain; ``stop()`` is just</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="sd">    the request to wind down. Renaming would be cleaner but</span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="sd">    breaking; the docstring carries the contract.</span>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">watcher</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-256">256</a></span>
+<span class="normal"><a href="#__codelineno-0-257">257</a></span>
+<span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span>
+<span class="normal"><a href="#__codelineno-0-262">262</a></span>
+<span class="normal"><a href="#__codelineno-0-263">263</a></span>
+<span class="normal"><a href="#__codelineno-0-264">264</a></span>
+<span class="normal"><a href="#__codelineno-0-265">265</a></span>
+<span class="normal"><a href="#__codelineno-0-266">266</a></span>
+<span class="normal"><a href="#__codelineno-0-267">267</a></span>
+<span class="normal"><a href="#__codelineno-0-268">268</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Signal an orderly shutdown.</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="sd">    Sets the stop events on the watcher and inbound notifier and</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="sd">    returns immediately - it does **not** wait for :meth:`run` to</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="sd">    finish. The CLI&#39;s ``_run_until_signalled`` is what actually</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">    awaits the running ``run()`` task to drain; ``stop()`` is just</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">    the request to wind down. Renaming would be cleaner but</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">    breaking; the docstring carries the contract.</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">watcher</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deps</span><span class="o">.</span><span class="n">notifier_inbound</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

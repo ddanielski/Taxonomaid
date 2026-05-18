@@ -1657,6 +1657,24 @@ remains valid.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="taxonomaid.config.models.WatchConfig.bootstrap_existing">bootstrap_existing</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When True, scan this watch root on daemon
+start and process every existing file as if it had just
+been created. Useful for the first-deploy case: inotify
+only fires on new events, so files already in the watch
+root are otherwise invisible to the daemon. Defaults to
+False so a daemon restart on a busy folder doesn't
+accidentally re-classify thousands of files. Files
+already inside <code>unsorted_dir</code> are always skipped.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1890,29 +1908,29 @@ characters even when the field was misnamed.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/config/models.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-222">222</a></span>
-<span class="normal"><a href="#__codelineno-0-223">223</a></span>
-<span class="normal"><a href="#__codelineno-0-224">224</a></span>
-<span class="normal"><a href="#__codelineno-0-225">225</a></span>
-<span class="normal"><a href="#__codelineno-0-226">226</a></span>
-<span class="normal"><a href="#__codelineno-0-227">227</a></span>
-<span class="normal"><a href="#__codelineno-0-228">228</a></span>
-<span class="normal"><a href="#__codelineno-0-229">229</a></span>
-<span class="normal"><a href="#__codelineno-0-230">230</a></span>
-<span class="normal"><a href="#__codelineno-0-231">231</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-231">231</a></span>
 <span class="normal"><a href="#__codelineno-0-232">232</a></span>
-<span class="normal"><a href="#__codelineno-0-233">233</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-222" name="__codelineno-0-222"></a><span class="nd">@classmethod</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a><span class="k">def</span><span class="w"> </span><span class="nf">settings_customise_sources</span><span class="p">(</span>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a>    <span class="bp">cls</span><span class="p">,</span>
-<a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="n">settings_cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseSettings</span><span class="p">],</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">init_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">env_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a>    <span class="n">dotenv_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
-<a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="n">file_secret_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
-<a id="__codelineno-0-230" name="__codelineno-0-230"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PydanticBaseSettingsSource</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Restrict the source chain to: explicit YAML values, then env vars, then defaults.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-232" name="__codelineno-0-232"></a>    <span class="k">del</span> <span class="n">settings_cls</span><span class="p">,</span> <span class="n">dotenv_settings</span><span class="p">,</span> <span class="n">file_secret_settings</span>
-<a id="__codelineno-0-233" name="__codelineno-0-233"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">init_settings</span><span class="p">,</span> <span class="n">env_settings</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-233">233</a></span>
+<span class="normal"><a href="#__codelineno-0-234">234</a></span>
+<span class="normal"><a href="#__codelineno-0-235">235</a></span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span>
+<span class="normal"><a href="#__codelineno-0-239">239</a></span>
+<span class="normal"><a href="#__codelineno-0-240">240</a></span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span>
+<span class="normal"><a href="#__codelineno-0-242">242</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="nd">@classmethod</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="k">def</span><span class="w"> </span><span class="nf">settings_customise_sources</span><span class="p">(</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>    <span class="bp">cls</span><span class="p">,</span>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="n">settings_cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseSettings</span><span class="p">],</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="n">init_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="n">env_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="n">dotenv_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="n">file_secret_settings</span><span class="p">:</span> <span class="n">PydanticBaseSettingsSource</span><span class="p">,</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PydanticBaseSettingsSource</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Restrict the source chain to: explicit YAML values, then env vars, then defaults.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="k">del</span> <span class="n">settings_cls</span><span class="p">,</span> <span class="n">dotenv_settings</span><span class="p">,</span> <span class="n">file_secret_settings</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">init_settings</span><span class="p">,</span> <span class="n">env_settings</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2096,11 +2114,11 @@ credentials in the path. The boundary code unwraps them via
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/config/models.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-271">271</a></span>
-<span class="normal"><a href="#__codelineno-0-272">272</a></span>
-<span class="normal"><a href="#__codelineno-0-273">273</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoherenceSpec</span><span class="p">:</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable domain representation.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="k">return</span> <span class="n">CoherenceSpec</span><span class="p">(</span><span class="n">year_match</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">year_match</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-280">280</a></span>
+<span class="normal"><a href="#__codelineno-0-281">281</a></span>
+<span class="normal"><a href="#__codelineno-0-282">282</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoherenceSpec</span><span class="p">:</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable domain representation.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>    <span class="k">return</span> <span class="n">CoherenceSpec</span><span class="p">(</span><span class="n">year_match</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">year_match</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2180,21 +2198,21 @@ pre-compiled at validation time so a malformed regex fails fast.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/config/models.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-346">346</a></span>
-<span class="normal"><a href="#__codelineno-0-347">347</a></span>
-<span class="normal"><a href="#__codelineno-0-348">348</a></span>
-<span class="normal"><a href="#__codelineno-0-349">349</a></span>
-<span class="normal"><a href="#__codelineno-0-350">350</a></span>
-<span class="normal"><a href="#__codelineno-0-351">351</a></span>
-<span class="normal"><a href="#__codelineno-0-352">352</a></span>
-<span class="normal"><a href="#__codelineno-0-353">353</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MatchSpec</span><span class="p">:</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable domain representation.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="k">return</span> <span class="n">MatchSpec</span><span class="p">(</span>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a>        <span class="n">filename_regex</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">filename_regex</span><span class="p">,</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="n">ext</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">,</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a>        <span class="n">mime_types</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mime_types</span><span class="p">,</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>        <span class="n">content_keywords</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">content_keywords</span><span class="p">,</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-355">355</a></span>
+<span class="normal"><a href="#__codelineno-0-356">356</a></span>
+<span class="normal"><a href="#__codelineno-0-357">357</a></span>
+<span class="normal"><a href="#__codelineno-0-358">358</a></span>
+<span class="normal"><a href="#__codelineno-0-359">359</a></span>
+<span class="normal"><a href="#__codelineno-0-360">360</a></span>
+<span class="normal"><a href="#__codelineno-0-361">361</a></span>
+<span class="normal"><a href="#__codelineno-0-362">362</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MatchSpec</span><span class="p">:</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable domain representation.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">return</span> <span class="n">MatchSpec</span><span class="p">(</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>        <span class="n">filename_regex</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">filename_regex</span><span class="p">,</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>        <span class="n">ext</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">,</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a>        <span class="n">mime_types</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mime_types</span><span class="p">,</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>        <span class="n">content_keywords</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">content_keywords</span><span class="p">,</span>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a>    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2272,31 +2290,31 @@ pre-compiled at validation time so a malformed regex fails fast.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/config/models.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-417">417</a></span>
-<span class="normal"><a href="#__codelineno-0-418">418</a></span>
-<span class="normal"><a href="#__codelineno-0-419">419</a></span>
-<span class="normal"><a href="#__codelineno-0-420">420</a></span>
-<span class="normal"><a href="#__codelineno-0-421">421</a></span>
-<span class="normal"><a href="#__codelineno-0-422">422</a></span>
-<span class="normal"><a href="#__codelineno-0-423">423</a></span>
-<span class="normal"><a href="#__codelineno-0-424">424</a></span>
-<span class="normal"><a href="#__codelineno-0-425">425</a></span>
-<span class="normal"><a href="#__codelineno-0-426">426</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-426">426</a></span>
 <span class="normal"><a href="#__codelineno-0-427">427</a></span>
 <span class="normal"><a href="#__codelineno-0-428">428</a></span>
-<span class="normal"><a href="#__codelineno-0-429">429</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Rule</span><span class="p">:</span>
-<a id="__codelineno-0-418" name="__codelineno-0-418"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable :class:`Rule` domain object.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-419" name="__codelineno-0-419"></a>    <span class="k">return</span> <span class="n">Rule</span><span class="p">(</span>
-<a id="__codelineno-0-420" name="__codelineno-0-420"></a>        <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-<a id="__codelineno-0-421" name="__codelineno-0-421"></a>        <span class="n">match</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">to_domain</span><span class="p">(),</span>
-<a id="__codelineno-0-422" name="__codelineno-0-422"></a>        <span class="n">destination_template</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">destination_template</span><span class="p">,</span>
-<a id="__codelineno-0-423" name="__codelineno-0-423"></a>        <span class="n">coherence</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coherence</span><span class="o">.</span><span class="n">to_domain</span><span class="p">(),</span>
-<a id="__codelineno-0-424" name="__codelineno-0-424"></a>        <span class="n">weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span>
-<a id="__codelineno-0-425" name="__codelineno-0-425"></a>        <span class="n">confidence</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a>        <span class="n">anchored</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">anchored</span><span class="p">,</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>        <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a>        <span class="n">sample_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_count</span><span class="p">,</span>
-<a id="__codelineno-0-429" name="__codelineno-0-429"></a>    <span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-429">429</a></span>
+<span class="normal"><a href="#__codelineno-0-430">430</a></span>
+<span class="normal"><a href="#__codelineno-0-431">431</a></span>
+<span class="normal"><a href="#__codelineno-0-432">432</a></span>
+<span class="normal"><a href="#__codelineno-0-433">433</a></span>
+<span class="normal"><a href="#__codelineno-0-434">434</a></span>
+<span class="normal"><a href="#__codelineno-0-435">435</a></span>
+<span class="normal"><a href="#__codelineno-0-436">436</a></span>
+<span class="normal"><a href="#__codelineno-0-437">437</a></span>
+<span class="normal"><a href="#__codelineno-0-438">438</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Rule</span><span class="p">:</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to the immutable :class:`Rule` domain object.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a>    <span class="k">return</span> <span class="n">Rule</span><span class="p">(</span>
+<a id="__codelineno-0-429" name="__codelineno-0-429"></a>        <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+<a id="__codelineno-0-430" name="__codelineno-0-430"></a>        <span class="n">match</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">to_domain</span><span class="p">(),</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a>        <span class="n">destination_template</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">destination_template</span><span class="p">,</span>
+<a id="__codelineno-0-432" name="__codelineno-0-432"></a>        <span class="n">coherence</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coherence</span><span class="o">.</span><span class="n">to_domain</span><span class="p">(),</span>
+<a id="__codelineno-0-433" name="__codelineno-0-433"></a>        <span class="n">weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span>
+<a id="__codelineno-0-434" name="__codelineno-0-434"></a>        <span class="n">confidence</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
+<a id="__codelineno-0-435" name="__codelineno-0-435"></a>        <span class="n">anchored</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">anchored</span><span class="p">,</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a>        <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="n">sample_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_count</span><span class="p">,</span>
+<a id="__codelineno-0-438" name="__codelineno-0-438"></a>    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2376,11 +2394,11 @@ pre-compiled at validation time so a malformed regex fails fast.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/taxonomaid/config/models.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-452">452</a></span>
-<span class="normal"><a href="#__codelineno-0-453">453</a></span>
-<span class="normal"><a href="#__codelineno-0-454">454</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Rule</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert every rule to its immutable domain form.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a>    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">to_domain</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-461">461</a></span>
+<span class="normal"><a href="#__codelineno-0-462">462</a></span>
+<span class="normal"><a href="#__codelineno-0-463">463</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-461" name="__codelineno-0-461"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Rule</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert every rule to its immutable domain form.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-463" name="__codelineno-0-463"></a>    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">to_domain</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
